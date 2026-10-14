@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GraphOps | Autonomous Multi-Agent Swarm</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
+    body { font-family: 'Inter', sans-serif; }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.25); }
+    .glow-green { box-shadow: 0 0 20px rgba(34, 197, 94, 0.25); }
+    .glow-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.25); }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
+
+  <!-- Top Navbar -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+          <i class="fa-solid fa-network-wired"></i>
+        </div>
+        <div>
+          <h1 class="font-bold text-lg tracking-tight">GraphOps</h1>
+          <p class="text-xs text-slate-400 mono">FalkorDB Multi-Agent Swarm (Graph Hacks 2026)</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-4">
+        <a href="http://localhost:3000" target="_blank" class="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-800 text-cyan-400 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-2">
+          <i class="fa-solid fa-up-right-from-square"></i> FalkorDB Browser (Port 3000)
+        </a>
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-950/80 border border-emerald-800 text-emerald-400 text-xs mono">
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+          FalkorDB: Connected
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full space-y-6">
+
+    <!-- Track Badges Banner -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-brain"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mono">Track 1</span>
+          <h3 class="text-sm font-semibold">Actions on Connected Data</h3>
+          <p class="text-xs text-slate-400">Multi-hop blast radius & root-cause</p>
+        </div>
+      </div>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-memory"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 mono">Track 2</span>
+          <h3 class="text-sm font-semibold">Agent Memory & Coordination</h3>
+          <p class="text-xs text-slate-400">Episodic memory & agent handoffs</p>
+        </div>
+      </div>
+      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
+        <div class="w-10 h-10 rounded-lg bg-violet-500/10 text-violet-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-sitemap"></i>
+        </div>
+        <div>
+          <span class="text-[10px] font-bold uppercase tracking-wider text-violet-400 mono">Track 3</span>
+          <h3 class="text-sm font-semibold">Company Brain Context</h3>
+          <p class="text-xs text-slate-400">Services, Teams, PRs & Runbooks</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Metrics Bar -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <span class="text-xs text-slate-400 mono">Company Brain Nodes</span>
+        <div id="stat-nodes" class="text-2xl font-bold mt-1 text-white mono">--</div>
+        <span class="text-[11px] text-slate-500">Services, Teams, Commits</span>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <span class="text-xs text-slate-400 mono">Graph Relationships</span>
+        <div id="stat-edges" class="text-2xl font-bold mt-1 text-white mono">--</div>
+        <span class="text-[11px] text-slate-500">CALLS, DEPENDS_ON, OWNS</span>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <span class="text-xs text-slate-400 mono">Active Outage State</span>
+        <div id="stat-incident" class="text-2xl font-bold mt-1 mono text-amber-400">Checking...</div>
+        <span id="stat-severity" class="text-[11px] text-slate-500">Severity: --</span>
+      </div>
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+        <span class="text-xs text-slate-400 mono">Persisted Episodes</span>
+        <div id="stat-episodes" class="text-2xl font-bold mt-1 text-emerald-400 mono">--</div>
+        <span class="text-[11px] text-slate-500">Cross-session memories</span>
+      </div>
+    </div>
+
+    <!-- Action Controls -->
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
+      <div>
+        <h2 class="text-lg font-bold">Autonomous Swarm Control Panel</h2>
+        <p class="text-sm text-slate-400">Trigger multi-agent triage, blast radius analysis, runbook lookup, and automated remediation.</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <button id="btn-reset" onclick="resetGraph()" class="px-4 py-2.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-2">
+          <i class="fa-solid fa-rotate-left"></i> Re-Seed Outage
+        </button>
+        <button id="btn-swarm" onclick="runSwarm()" class="px-6 py-2.5 rounded-lg text-sm font-semibold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition shadow-lg shadow-cyan-500/25 flex items-center gap-2">
+          <i class="fa-solid fa-play"></i> Run Autonomous Swarm
+        </button>
+      </div>
+    </div>
+
+    <!-- Live Execution & Swarm Results Section -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+
+      <!-- Left Column: Chronological Agent Execution Log -->
+      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col">
+        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-cyan-400"></span>
+            <h3 class="font-bold text-sm">Agent Reasoning & Traceability Log</h3>
+          </div>
+          <span id="session-badge" class="text-xs text-slate-400 mono">Session: Idle</span>
+        </div>
+        <div id="terminal-feed" class="flex-1 space-y-3 mono text-xs overflow-y-auto max-h-[460px] p-2 bg-slate-950 rounded-lg border border-slate-800/80">
+          <div class="text-slate-500">// Waiting for swarm trigger... Click 'Run Autonomous Swarm' above.</div>
+        </div>
+      </div>
+
+      <!-- Right Column: Swarm Findings & Artifacts -->
+      <div class="space-y-6">
+
+        <!-- Blast Radius Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <i class="fa-solid fa-radar text-rose-400 text-sm"></i>
+            <h4 class="font-bold text-sm">Blast Radius Analysis</h4>
+          </div>
+          <div id="blast-content" class="text-xs text-slate-400 space-y-2">
+            <p>Awaiting investigation...</p>
+          </div>
+        </div>
+
+        <!-- Root Cause & Runbook Card -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <i class="fa-solid fa-code-commit text-amber-400 text-sm"></i>
+            <h4 class="font-bold text-sm">Root-Cause & Runbook</h4>
+          </div>
+          <div id="cause-content" class="text-xs text-slate-400 space-y-2">
+            <p>Awaiting investigation...</p>
+          </div>
+        </div>
+
+        <!-- Critical Choke Points (Graph Analytics) -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div class="flex items-center gap-2 mb-3">
+            <i class="fa-solid fa-diagram-project text-cyan-400 text-sm"></i>
+            <h4 class="font-bold text-sm">Centrality Choke Points</h4>
+          </div>
+          <div id="choke-content" class="text-xs text-slate-400 space-y-2">
+            <p>Loading graph metrics...</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-slate-800 py-4 px-6 text-center text-xs text-slate-500 mono">
+    GraphOps &copy; 2026 | Built for WeMakeDevs & FalkorDB "Graph Hacks: Context for AI Agents"
+  </footer>
+
+  <script>
+    async function loadStatus() {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        if (data.status === 'ONLINE') {
+          document.getElementById('stat-nodes').innerText = data.company_brain_nodes;
+          document.getElementById('stat-edges').innerText = data.company_brain_edges;
+          document.getElementById('stat-episodes').innerText = data.persisted_episodes;
+
+          if (data.incidents && data.incidents.length > 0) {
+            const inc = data.incidents[0];
+            const badge = document.getElementById('stat-incident');
+            badge.innerText = inc.status;
+            if (inc.status === 'ACTIVE') {
+              badge.className = 'text-2xl font-bold mt-1 mono text-rose-500 animate-pulse';
+            } else {
+              badge.className = 'text-2xl font-bold mt-1 mono text-emerald-400';
+            }
+            document.getElementById('stat-severity').innerText = `${inc.id} (${inc.severity})`;
+          }
+
+          if (data.top_bottlenecks) {
+            const html = data.top_bottlenecks.map(b => `
+              <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
+                <span class="text-slate-300 font-medium">${b.name} (${b.tier})</span>
+                <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 mono">Centrality: ${b.total_centrality}</span>
+              </div>
+            `).join('');
+            document.getElementById('choke-content').innerHTML = html;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to load status:", e);
+      }
+    }
+
+    async function resetGraph() {
+      const btn = document.getElementById('btn-reset');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Seeding...';
+      try {
+        await fetch('/api/reset', { method: 'POST' });
+        await loadStatus();
+        document.getElementById('terminal-feed').innerHTML = '<div class="text-amber-400">// Graph reset: New SEV-1 outage seeded on auth-service. Ready for swarm triage.</div>';
+        document.getElementById('blast-content').innerHTML = '<p class="text-slate-500">Awaiting investigation...</p>';
+        document.getElementById('cause-content').innerHTML = '<p class="text-slate-500">Awaiting investigation...</p>';
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Re-Seed Outage';
+      }
+    }
+
+    async function runSwarm() {
+      const btn = document.getElementById('btn-swarm');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Swarm Running...';
+      const term = document.getElementById('terminal-feed');
+      term.innerHTML = '<div class="text-cyan-400">[SYSTEM] Invoking TriageAgent & RemediationAgent via FalkorDB...</div>';
+
+      try {
+        const res = await fetch('/api/run-swarm', { method: 'POST' });
+        const result = await res.json();
+
+        document.getElementById('session-badge').innerText = `Session: ${result.session_id}`;
+
+        if (result.status === 'NO_ACTIVE_INCIDENTS') {
+          term.innerHTML = `
+            <div class="p-4 rounded-lg bg-slate-900 border border-amber-500/30 text-amber-300 space-y-2">
+              <div class="font-bold flex items-center gap-2 text-sm">
+                <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> No Active Outage Detected
+              </div>
+              <p class="text-xs text-slate-300">The current incident in FalkorDB is already marked <span class="text-emerald-400 font-bold">RESOLVED</span>.</p>
+              <p class="text-xs text-slate-400">To trigger a new triage cycle, click the <strong class="text-white">"Re-Seed Outage"</strong> button above to inject a fresh SEV-1 alert.</p>
+            </div>
+          `;
+          return;
+        }
+
+        // Populate Audit Feed
+        term.innerHTML = '';
+        result.audit_trail.forEach(s => {
+          const color = s.agent === 'TriageAgent' ? 'text-cyan-400' : 'text-emerald-400';
+          const icon = s.agent === 'TriageAgent' ? 'fa-magnifying-glass' : 'fa-wrench';
+          term.innerHTML += `
+            <div class="p-2.5 rounded bg-slate-900/90 border border-slate-800">
+              <div class="flex items-center justify-between mb-1">
+                <span class="${color} font-bold flex items-center gap-1.5">
+                  <i class="fa-solid ${icon}"></i> Step ${s.step}: [${s.agent}]
+                </span>
+                <span class="text-slate-500 text-[10px]">${s.tool_used}</span>
+              </div>
+              <p class="text-slate-200 mt-1">${s.thought}</p>
+            </div>
+          `;
+        });
+
+        term.innerHTML += `
+          <div class="p-3 rounded bg-emerald-950/60 border border-emerald-800 text-emerald-300 font-semibold flex items-center gap-2">
+            <i class="fa-solid fa-circle-check text-emerald-400 text-base"></i>
+            Incident ${result.incident_id} successfully mitigated and updated to RESOLVED!
+          </div>
+        `;
+
+        // Blast radius display
+        const callers = result.blast_radius.impacted_services.map(c => `
+          <li class="flex justify-between items-center py-0.5">
+            <span>${c.name} (${c.tier})</span>
+            <span class="text-rose-400 mono">${c.hops_from_failure} hop(s)</span>
+          </li>
+        `).join('');
+        document.getElementById('blast-content').innerHTML = `
+          <p class="text-slate-300 font-medium">Impacted Upstream Callers: <span class="text-rose-400 font-bold">${result.blast_radius.total_impacted_services}</span></p>
+          <ul class="list-disc pl-4 space-y-1 mt-1 text-slate-400">${callers}</ul>
+        `;
+
+        // Root cause & Runbook display
+        const commit = result.root_cause.suspect_commit;
+        document.getElementById('cause-content').innerHTML = `
+          <div class="space-y-1">
+            <p><span class="text-slate-500">Culprit Commit:</span> <span class="text-amber-400 mono">${commit.sha}</span></p>
+            <p><span class="text-slate-500">Author:</span> <span class="text-slate-200">${commit.author}</span> (${result.ownership.slack_channel})</p>
+            <p><span class="text-slate-500">Message:</span> <span class="text-slate-300 italic">"${commit.message}"</span></p>
+            <div class="mt-2 pt-2 border-t border-slate-800">
+              <span class="text-[10px] uppercase font-bold text-emerald-400 mono">Runbook Executed</span>
+              <p class="text-slate-200 font-medium">${result.runbook.title} (${result.runbook.automated_action})</p>
+            </div>
+          </div>
+        `;
+
+        await loadStatus();
+      } catch (err) {
+        term.innerHTML += `<div class="text-rose-400">[ERROR] Execution failed: ${err.message}</div>`;
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-play"></i> Run Autonomous Swarm';
+      }
+    }
+
+    // Initial status polling
+    loadStatus();
+  </script>
+</body>
+</html>
