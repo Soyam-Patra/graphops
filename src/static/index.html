@@ -3,118 +3,172 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GraphOps | Autonomous Multi-Agent Swarm</title>
+  <title>GraphOps | Autonomous Multi-Agent SRE Swarm</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; }
     .mono { font-family: 'JetBrains Mono', monospace; }
-    .glow-cyan { box-shadow: 0 0 20px rgba(6, 182, 212, 0.25); }
-    .glow-green { box-shadow: 0 0 20px rgba(34, 197, 94, 0.25); }
-    .glow-red { box-shadow: 0 0 20px rgba(239, 68, 68, 0.25); }
+    #graph-network { width: 100%; height: 520px; outline: none; }
+    .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
   </style>
 </head>
 <body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col">
 
   <!-- Top Navbar -->
-  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50">
     <div class="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
       <div class="flex items-center gap-3">
-        <div class="w-9 h-9 rounded-lg bg-gradient-to-tr from-cyan-500 to-indigo-600 flex items-center justify-center text-white font-bold text-lg shadow-lg">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-cyan-500/20">
           <i class="fa-solid fa-network-wired"></i>
         </div>
         <div>
-          <h1 class="font-bold text-lg tracking-tight">GraphOps</h1>
-          <p class="text-xs text-slate-400 mono">FalkorDB Multi-Agent Swarm (Graph Hacks 2026)</p>
+          <h1 class="font-bold text-lg tracking-tight flex items-center gap-2">
+            GraphOps <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/80 mono">FalkorDB Swarm</span>
+          </h1>
+          <p class="text-xs text-slate-400 mono">WeMakeDevs "Graph Hacks" Oct 15–18, 2026</p>
         </div>
       </div>
-      <div class="flex items-center gap-4">
-        <a href="http://localhost:3000" target="_blank" class="px-3 py-1.5 rounded-md text-xs font-medium bg-slate-800 text-cyan-400 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-2">
-          <i class="fa-solid fa-up-right-from-square"></i> FalkorDB Browser (Port 3000)
+      <div class="flex items-center gap-3">
+        <a href="http://localhost:3000" target="_blank" class="px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 text-cyan-400 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-2">
+          <i class="fa-solid fa-up-right-from-square"></i> FalkorDB Browser (:3000)
         </a>
-        <div class="flex items-center gap-2 px-3 py-1.5 rounded-md bg-emerald-950/80 border border-emerald-800 text-emerald-400 text-xs mono">
+        <div class="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-950/80 border border-emerald-800 text-emerald-400 text-xs mono">
           <span class="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
-          FalkorDB: Connected
+          Engine: Online
         </div>
       </div>
     </div>
   </header>
 
-  <!-- Main Content -->
-  <main class="max-w-7xl mx-auto px-6 py-8 flex-1 w-full space-y-6">
+  <!-- Main Container -->
+  <main class="max-w-7xl mx-auto px-6 py-6 flex-1 w-full space-y-6">
 
-    <!-- Track Badges Banner -->
+    <!-- 3 Tracks Header Pill Grid -->
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
+      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 flex items-center gap-3 hover:border-cyan-800/60 transition">
         <div class="w-10 h-10 rounded-lg bg-cyan-500/10 text-cyan-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-route"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mono">Track 1</span>
+            <span class="text-[10px] text-slate-500">iPhone 18 Pro</span>
+          </div>
+          <h3 class="text-xs font-semibold text-slate-200">Actions on Connected Data</h3>
+          <p class="text-[11px] text-slate-400">Multi-hop blast radius & root-cause</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 flex items-center gap-3 hover:border-indigo-800/60 transition">
+        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-lg">
+          <i class="fa-solid fa-clock-rotate-left"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 mono">Track 2</span>
+            <span class="text-[10px] text-slate-500">PS5 + GTA VI</span>
+          </div>
+          <h3 class="text-xs font-semibold text-slate-200">Agent Memory & Coordination</h3>
+          <p class="text-[11px] text-slate-400">Episodic memory & agent handoffs</p>
+        </div>
+      </div>
+
+      <div class="bg-slate-900/70 border border-slate-800 rounded-xl p-4 flex items-center gap-3 hover:border-purple-800/60 transition">
+        <div class="w-10 h-10 rounded-lg bg-purple-500/10 text-purple-400 flex items-center justify-center text-lg">
           <i class="fa-solid fa-brain"></i>
         </div>
         <div>
-          <span class="text-[10px] font-bold uppercase tracking-wider text-cyan-400 mono">Track 1</span>
-          <h3 class="text-sm font-semibold">Actions on Connected Data</h3>
-          <p class="text-xs text-slate-400">Multi-hop blast radius & root-cause</p>
-        </div>
-      </div>
-      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center text-lg">
-          <i class="fa-solid fa-memory"></i>
-        </div>
-        <div>
-          <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-400 mono">Track 2</span>
-          <h3 class="text-sm font-semibold">Agent Memory & Coordination</h3>
-          <p class="text-xs text-slate-400">Episodic memory & agent handoffs</p>
-        </div>
-      </div>
-      <div class="bg-slate-900/60 border border-slate-800 rounded-xl p-4 flex items-center gap-3">
-        <div class="w-10 h-10 rounded-lg bg-violet-500/10 text-violet-400 flex items-center justify-center text-lg">
-          <i class="fa-solid fa-sitemap"></i>
-        </div>
-        <div>
-          <span class="text-[10px] font-bold uppercase tracking-wider text-violet-400 mono">Track 3</span>
-          <h3 class="text-sm font-semibold">Company Brain Context</h3>
-          <p class="text-xs text-slate-400">Services, Teams, PRs & Runbooks</p>
+          <div class="flex items-center gap-2">
+            <span class="text-[10px] font-bold uppercase tracking-wider text-purple-400 mono">Track 3</span>
+            <span class="text-[10px] text-slate-500">M6 Mac Mini</span>
+          </div>
+          <h3 class="text-xs font-semibold text-slate-200">Company Brain Context</h3>
+          <p class="text-[11px] text-slate-400">Services, Teams, PRs & Runbooks</p>
         </div>
       </div>
     </div>
 
-    <!-- Metrics Bar -->
+    <!-- Live Metrics Counter Bar -->
     <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
         <span class="text-xs text-slate-400 mono">Company Brain Nodes</span>
-        <div id="stat-nodes" class="text-2xl font-bold mt-1 text-white mono">--</div>
+        <div id="stat-nodes" class="text-2xl font-bold mt-1 text-white mono">24</div>
         <span class="text-[11px] text-slate-500">Services, Teams, Commits</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
         <span class="text-xs text-slate-400 mono">Graph Relationships</span>
-        <div id="stat-edges" class="text-2xl font-bold mt-1 text-white mono">--</div>
+        <div id="stat-edges" class="text-2xl font-bold mt-1 text-white mono">29</div>
         <span class="text-[11px] text-slate-500">CALLS, DEPENDS_ON, OWNS</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
         <span class="text-xs text-slate-400 mono">Active Outage State</span>
-        <div id="stat-incident" class="text-2xl font-bold mt-1 mono text-amber-400">Checking...</div>
-        <span id="stat-severity" class="text-[11px] text-slate-500">Severity: --</span>
+        <div id="stat-incident" class="text-2xl font-bold mt-1 mono text-rose-500 animate-pulse">ACTIVE</div>
+        <span id="stat-severity" class="text-[11px] text-slate-500">INC-2026-881 (SEV-1)</span>
       </div>
       <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
         <span class="text-xs text-slate-400 mono">Persisted Episodes</span>
         <div id="stat-episodes" class="text-2xl font-bold mt-1 text-emerald-400 mono">--</div>
-        <span class="text-[11px] text-slate-500">Cross-session memories</span>
+        <span class="text-[11px] text-slate-500">FalkorDB Swarm Memory</span>
       </div>
     </div>
 
-    <!-- Action Controls -->
-    <div class="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-xl p-6 flex flex-col md:flex-row items-center justify-between gap-4">
-      <div>
-        <h2 class="text-lg font-bold">Autonomous Swarm Control Panel</h2>
-        <p class="text-sm text-slate-400">Trigger multi-agent triage, blast radius analysis, runbook lookup, and automated remediation.</p>
+    <!-- Chaos Control Banner -->
+    <div class="bg-gradient-to-r from-slate-900 via-indigo-950/50 to-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+      <div class="space-y-1">
+        <div class="flex items-center gap-2">
+          <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 mono">Chaos Engine</span>
+          <h2 class="text-base font-bold">Autonomous Swarm Control Panel</h2>
+        </div>
+        <p class="text-xs text-slate-400">Select an outage scenario, inject it into FalkorDB, and watch the agents coordinate in real-time.</p>
       </div>
-      <div class="flex items-center gap-3">
-        <button id="btn-reset" onclick="resetGraph()" class="px-4 py-2.5 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-2">
-          <i class="fa-solid fa-rotate-left"></i> Re-Seed Outage
+
+      <div class="flex flex-wrap items-center gap-3">
+        <!-- Scenario Selector -->
+        <select id="scenario-select" class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 text-slate-200 border border-slate-700 outline-none focus:border-cyan-500">
+          <option value="bad_deployment">Scenario A: Bad Git Commit (Auth Service Rollback)</option>
+          <option value="db_pool_leak">Scenario B: DB Connection Leak (CockroachDB Pool Saturation)</option>
+          <option value="traffic_spike">Scenario C: Inbound Traffic Surge (Gateway Circuit Breaker)</option>
+        </select>
+
+        <button id="btn-reset" onclick="resetGraph()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1.5">
+          <i class="fa-solid fa-rotate-left"></i> Re-Seed
         </button>
-        <button id="btn-swarm" onclick="runSwarm()" class="px-6 py-2.5 rounded-lg text-sm font-semibold bg-cyan-500 text-slate-950 hover:bg-cyan-400 transition shadow-lg shadow-cyan-500/25 flex items-center gap-2">
+
+        <button id="btn-swarm" onclick="runSwarm()" class="px-5 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-cyan-500 to-indigo-500 text-slate-950 hover:brightness-110 transition shadow-lg shadow-cyan-500/25 flex items-center gap-2">
           <i class="fa-solid fa-play"></i> Run Autonomous Swarm
         </button>
+      </div>
+    </div>
+
+    <!-- Embedded Live Interactive Graph Canvas -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+      <div class="px-5 py-3 border-b border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></span>
+          <h3 class="font-bold text-sm">FalkorDB Live Topology Canvas</h3>
+          <span class="text-xs text-slate-500 mono">(Interactive GraphBLAS Engine)</span>
+        </div>
+        <!-- Legend -->
+        <div class="flex flex-wrap items-center gap-3 text-[11px] mono text-slate-400">
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-[#0284c7]"></span> Service</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span> Database</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#d97706]"></span> Team</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#059669]"></span> Engineer</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#dc2626]"></span> Incident</span>
+          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#ea580c]"></span> Commit</span>
+          <button onclick="network.fit()" class="text-cyan-400 hover:text-cyan-300 ml-2" title="Fit to Screen"><i class="fa-solid fa-expand"></i></button>
+        </div>
+      </div>
+      <div class="relative">
+        <div id="graph-network" class="bg-slate-950"></div>
+        <div id="graph-hint" class="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur border border-slate-800 rounded px-2.5 py-1 text-[11px] text-slate-400 mono">
+          💡 Click any node to inspect live Cypher properties
+        </div>
       </div>
     </div>
 
@@ -130,7 +184,7 @@
           </div>
           <span id="session-badge" class="text-xs text-slate-400 mono">Session: Idle</span>
         </div>
-        <div id="terminal-feed" class="flex-1 space-y-3 mono text-xs overflow-y-auto max-h-[460px] p-2 bg-slate-950 rounded-lg border border-slate-800/80">
+        <div id="terminal-feed" class="flex-1 space-y-3 mono text-xs overflow-y-auto max-h-[460px] p-2.5 bg-slate-950 rounded-lg border border-slate-800/80 custom-scrollbar">
           <div class="text-slate-500">// Waiting for swarm trigger... Click 'Run Autonomous Swarm' above.</div>
         </div>
       </div>
@@ -160,19 +214,73 @@
           </div>
         </div>
 
-        <!-- Critical Choke Points (Graph Analytics) -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <div class="flex items-center gap-2 mb-3">
-            <i class="fa-solid fa-diagram-project text-cyan-400 text-sm"></i>
-            <h4 class="font-bold text-sm">Centrality Choke Points</h4>
+        <!-- Node Inspector Drawer -->
+        <div id="node-inspector" class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-circle-info text-cyan-400 text-sm"></i>
+              <h4 class="font-bold text-sm">Node Property Inspector</h4>
+            </div>
+            <span id="inspector-type" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 mono text-slate-300">Select Node</span>
           </div>
-          <div id="choke-content" class="text-xs text-slate-400 space-y-2">
-            <p>Loading graph metrics...</p>
+          <div id="inspector-content" class="text-xs text-slate-400 mono space-y-1">
+            <p class="text-slate-500 italic">Click any node on the graph canvas above to inspect live FalkorDB properties.</p>
           </div>
         </div>
 
       </div>
 
+    </div>
+
+    <!-- Company Brain Q&A Assistant (Track 3 Hero Feature) -->
+    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2">
+          <i class="fa-solid fa-comments text-indigo-400"></i>
+          <h3 class="font-bold text-sm">Company Brain Q&A Assistant</h3>
+          <span class="text-xs text-slate-500 mono">(Natural Language to Cypher)</span>
+        </div>
+        <span class="text-xs text-indigo-400 mono">Track 3: Connected Org Intelligence</span>
+      </div>
+
+      <!-- Quick Question Chips -->
+      <div class="flex flex-wrap gap-2 text-xs">
+        <button onclick="askQuestion('Who is on call right now?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+          📞 Who is on call?
+        </button>
+        <button onclick="askQuestion('Which service is our highest single point of failure?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+          ⚠️ Highest Bottleneck / Choke Point
+        </button>
+        <button onclick="askQuestion('Show me all database dependencies')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+          🗄️ Database Dependencies
+        </button>
+        <button onclick="askQuestion('What are the recent code deployments?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+          🚀 Recent Git Commits
+        </button>
+        <button onclick="askQuestion('Which team owns which services?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+          👥 Team Ownership Roster
+        </button>
+      </div>
+
+      <!-- Chat Input -->
+      <div class="flex gap-2">
+        <input id="chat-input" type="text" placeholder="Ask anything about the company (e.g. 'Who is on call?' or type raw Cypher: 'MATCH (s:Service) RETURN s.name')..."
+               onkeydown="if(event.key === 'Enter') submitChat()"
+               class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 mono">
+        <button onclick="submitChat()" class="px-5 py-2.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1.5">
+          <i class="fa-solid fa-paper-plane"></i> Ask Graph
+        </button>
+      </div>
+
+      <!-- Chat Response Window -->
+      <div id="chat-response" class="hidden bg-slate-950 border border-slate-800/80 rounded-lg p-4 text-xs space-y-3 mono">
+        <div class="flex items-center justify-between text-slate-500 text-[11px] pb-2 border-b border-slate-800">
+          <span>Generated Cypher Query</span>
+          <span class="text-emerald-400">FalkorDB Executed</span>
+        </div>
+        <pre id="chat-cypher" class="text-cyan-400 overflow-x-auto p-2 rounded bg-slate-900 border border-slate-800"></pre>
+        <div id="chat-answer" class="text-slate-200 whitespace-pre-wrap leading-relaxed font-sans text-sm"></div>
+      </div>
     </div>
 
   </main>
@@ -183,6 +291,66 @@
   </footer>
 
   <script>
+    let network = null;
+    let graphData = { nodes: [], edges: [] };
+    let rawNodesList = [];
+
+    // Initialize Vis.js Interactive Graph Canvas
+    async function initGraphCanvas() {
+      try {
+        const res = await fetch('/api/graph-data');
+        const data = await res.json();
+        rawNodesList = data.nodes;
+
+        const container = document.getElementById('graph-network');
+        const visNodes = new vis.DataSet(data.nodes);
+        const visEdges = new vis.DataSet(data.edges);
+
+        graphData = { nodes: visNodes, edges: visEdges };
+
+        const options = {
+          physics: {
+            solver: 'forceAtlas2Based',
+            forceAtlas2Based: {
+              gravitationalConstant: -40,
+              centralGravity: 0.008,
+              springLength: 95,
+              springConstant: 0.16
+            },
+            maxVelocity: 40,
+            stabilization: { iterations: 120 }
+          },
+          interaction: {
+            hover: true,
+            tooltipDelay: 150,
+            zoomView: true
+          }
+        };
+
+        network = new vis.Network(container, graphData, options);
+
+        // Click on node to inspect properties
+        network.on('click', function(params) {
+          if (params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            const nodeObj = rawNodesList.find(n => n.id === nodeId);
+            if (nodeObj) {
+              document.getElementById('inspector-type').innerText = nodeObj.group;
+              document.getElementById('inspector-content').innerHTML = `
+                <div class="p-2 rounded bg-slate-950 border border-slate-800 space-y-1">
+                  <p class="font-bold text-slate-200">${nodeObj.label}</p>
+                  <div class="text-[11px] text-slate-400 pt-1 border-t border-slate-800/80">${nodeObj.title}</div>
+                </div>
+              `;
+            }
+          }
+        });
+
+      } catch (err) {
+        console.error("Failed to load graph data:", err);
+      }
+    }
+
     async function loadStatus() {
       try {
         const res = await fetch('/api/status');
@@ -203,16 +371,6 @@
             }
             document.getElementById('stat-severity').innerText = `${inc.id} (${inc.severity})`;
           }
-
-          if (data.top_bottlenecks) {
-            const html = data.top_bottlenecks.map(b => `
-              <div class="flex justify-between items-center py-1 border-b border-slate-800/50">
-                <span class="text-slate-300 font-medium">${b.name} (${b.tier})</span>
-                <span class="px-2 py-0.5 rounded bg-cyan-950 text-cyan-400 mono">Centrality: ${b.total_centrality}</span>
-              </div>
-            `).join('');
-            document.getElementById('choke-content').innerHTML = html;
-          }
         }
       } catch (e) {
         console.error("Failed to load status:", e);
@@ -220,18 +378,20 @@
     }
 
     async function resetGraph() {
+      const scenario = document.getElementById('scenario-select').value;
       const btn = document.getElementById('btn-reset');
       btn.disabled = true;
       btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Seeding...';
       try {
-        await fetch('/api/reset', { method: 'POST' });
+        await fetch(`/api/reset?scenario=${scenario}`, { method: 'POST' });
         await loadStatus();
-        document.getElementById('terminal-feed').innerHTML = '<div class="text-amber-400">// Graph reset: New SEV-1 outage seeded on auth-service. Ready for swarm triage.</div>';
+        await initGraphCanvas();
+        document.getElementById('terminal-feed').innerHTML = `<div class="text-amber-400">// Outage injected: Scenario '${scenario}' is ACTIVE. Ready for swarm triage.</div>`;
         document.getElementById('blast-content').innerHTML = '<p class="text-slate-500">Awaiting investigation...</p>';
         document.getElementById('cause-content').innerHTML = '<p class="text-slate-500">Awaiting investigation...</p>';
       } finally {
         btn.disabled = false;
-        btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Re-Seed Outage';
+        btn.innerHTML = '<i class="fa-solid fa-rotate-left"></i> Re-Seed';
       }
     }
 
@@ -255,7 +415,7 @@
                 <i class="fa-solid fa-triangle-exclamation text-amber-400"></i> No Active Outage Detected
               </div>
               <p class="text-xs text-slate-300">The current incident in FalkorDB is already marked <span class="text-emerald-400 font-bold">RESOLVED</span>.</p>
-              <p class="text-xs text-slate-400">To trigger a new triage cycle, click the <strong class="text-white">"Re-Seed Outage"</strong> button above to inject a fresh SEV-1 alert.</p>
+              <p class="text-xs text-slate-400">To test again, select a scenario from the dropdown and click <strong class="text-white">"Re-Seed"</strong>.</p>
             </div>
           `;
           return;
@@ -302,17 +462,18 @@
         const commit = result.root_cause.suspect_commit;
         document.getElementById('cause-content').innerHTML = `
           <div class="space-y-1">
-            <p><span class="text-slate-500">Culprit Commit:</span> <span class="text-amber-400 mono">${commit.sha}</span></p>
-            <p><span class="text-slate-500">Author:</span> <span class="text-slate-200">${commit.author}</span> (${result.ownership.slack_channel})</p>
-            <p><span class="text-slate-500">Message:</span> <span class="text-slate-300 italic">"${commit.message}"</span></p>
+            <p><span class="text-slate-500">Root Cause:</span> <span class="text-amber-400 mono">${commit ? commit.sha : 'Infrastructure Saturation'}</span></p>
+            <p><span class="text-slate-500">Author:</span> <span class="text-slate-200">${commit ? commit.author : 'Telemetry Alert'}</span> (${result.ownership.slack_channel})</p>
+            <p><span class="text-slate-500">Message:</span> <span class="text-slate-300 italic">"${commit ? commit.message : 'Capacity Exceeded'}"</span></p>
             <div class="mt-2 pt-2 border-t border-slate-800">
               <span class="text-[10px] uppercase font-bold text-emerald-400 mono">Runbook Executed</span>
-              <p class="text-slate-200 font-medium">${result.runbook.title} (${result.runbook.automated_action})</p>
+              <p class="text-slate-200 font-medium">${result.runbook ? result.runbook.title : 'Standard Mitigation'} (${result.runbook ? result.runbook.automated_action : 'N/A'})</p>
             </div>
           </div>
         `;
 
         await loadStatus();
+        await initGraphCanvas();
       } catch (err) {
         term.innerHTML += `<div class="text-rose-400">[ERROR] Execution failed: ${err.message}</div>`;
       } finally {
@@ -321,8 +482,45 @@
       }
     }
 
-    // Initial status polling
-    loadStatus();
+    // Natural Language Q&A Function
+    async function askQuestion(text) {
+      document.getElementById('chat-input').value = text;
+      await submitChat();
+    }
+
+    async function submitChat() {
+      const input = document.getElementById('chat-input');
+      const question = input.value.trim();
+      if (!question) return;
+
+      const respBox = document.getElementById('chat-response');
+      const cypherBox = document.getElementById('chat-cypher');
+      const answerBox = document.getElementById('chat-answer');
+
+      respBox.classList.remove('hidden');
+      cypherBox.innerText = '// Translating question to Cypher...';
+      answerBox.innerText = 'Consulting FalkorDB company_brain...';
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question })
+        });
+        const data = await res.json();
+        cypherBox.innerText = data.cypher || 'N/A';
+        answerBox.innerText = data.answer || JSON.stringify(data.records);
+      } catch (e) {
+        cypherBox.innerText = '// Error querying graph';
+        answerBox.innerText = e.message;
+      }
+    }
+
+    // Startup initialization
+    window.addEventListener('DOMContentLoaded', () => {
+      loadStatus();
+      initGraphCanvas();
+    });
   </script>
 </body>
 </html>

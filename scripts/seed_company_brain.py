@@ -13,8 +13,8 @@ from falkordb import FalkorDB
 
 GRAPH_NAME = "company_brain"
 
-def seed_company_brain():
-    print(f"[*] Connecting to FalkorDB to populate graph '{GRAPH_NAME}'...")
+def seed_company_brain(scenario: str = "bad_deployment"):
+    print(f"[*] Connecting to FalkorDB to populate graph '{GRAPH_NAME}' (Scenario: {scenario})...")
     db = FalkorDB(host="localhost", port=6379)
     graph = db.select_graph(GRAPH_NAME)
 
@@ -138,8 +138,8 @@ def seed_company_brain():
     """
     graph.query(git_commits_auth)
 
-    # 5. Create Runbooks & Incident Context
-    print("    [5/5] Ingesting Incident Runbooks and Active Outage records...")
+    # 5. Create Runbooks & Incident Context based on chosen scenario
+    print(f"    [5/5] Ingesting Incident Runbooks and Active Outage scenario '{scenario}'...")
     runbooks = """
     CREATE (rb_db_pool:Runbook {
         id: 'RB-001',
@@ -165,22 +165,55 @@ def seed_company_brain():
     """
     graph.query(runbooks)
 
-    incident_trigger = """
-    MATCH (s_auth:Service {id: 'auth-service'}), 
-          (c2:Commit {sha: '4a1c78e'}), 
-          (rb_rollback:Runbook {id: 'RB-002'})
-    CREATE (inc:Incident {
-        id: 'INC-2026-881',
-        title: 'Cascading HTTP 504 Gateway Timeouts on Checkout Flow',
-        severity: 'SEV-1',
-        status: 'ACTIVE',
-        detectedAt: '2026-10-12T19:20:00Z',
-        symptom: 'API Gateway reporting 18% error rate on /v1/checkout/pay; Auth Service latency P99 jumped from 80ms to 4200ms'
-    }),
-    (inc)-[:AFFECTS {impactLevel: 'CRITICAL'}]->(s_auth),
-    (inc)-[:TRIGGERED_BY]->(c2),
-    (inc)-[:RECOMMENDED_RUNBOOK]->(rb_rollback)
-    """
+    if scenario == "db_pool_leak":
+        incident_trigger = """
+        MATCH (s_pay:Service {id: 'payment-processor'}),
+              (c1:Commit {sha: '9f8b12a'}),
+              (rb_pool:Runbook {id: 'RB-001'})
+        CREATE (inc:Incident {
+            id: 'INC-2026-902',
+            title: 'CockroachDB Connection Pool Saturation on Ledger Service',
+            severity: 'SEV-1',
+            status: 'ACTIVE',
+            detectedAt: '2026-10-15T02:45:00Z',
+            symptom: 'Payment Processor DB pool connection wait time exceeded 3000ms threshold; 14% failed transactions'
+        }),
+        (inc)-[:AFFECTS {impactLevel: 'CRITICAL'}]->(s_pay),
+        (inc)-[:TRIGGERED_BY]->(c1),
+        (inc)-[:RECOMMENDED_RUNBOOK]->(rb_pool)
+        """
+    elif scenario == "traffic_spike":
+        incident_trigger = """
+        MATCH (s_gw:Service {id: 'api-gateway'}),
+              (rb_cb:Runbook {id: 'RB-003'})
+        CREATE (inc:Incident {
+            id: 'INC-2026-943',
+            title: 'Cascading Traffic Surge & Inbound Queue Congestion',
+            severity: 'SEV-1',
+            status: 'ACTIVE',
+            detectedAt: '2026-10-15T03:10:00Z',
+            symptom: 'API Gateway RPS surged 340% over baseline; downstream worker queue depth overflowing'
+        }),
+        (inc)-[:AFFECTS {impactLevel: 'HIGH'}]->(s_gw),
+        (inc)-[:RECOMMENDED_RUNBOOK]->(rb_cb)
+        """
+    else:  # Default: bad_deployment
+        incident_trigger = """
+        MATCH (s_auth:Service {id: 'auth-service'}), 
+              (c2:Commit {sha: '4a1c78e'}), 
+              (rb_rollback:Runbook {id: 'RB-002'})
+        CREATE (inc:Incident {
+            id: 'INC-2026-881',
+            title: 'Cascading HTTP 504 Gateway Timeouts on Checkout Flow',
+            severity: 'SEV-1',
+            status: 'ACTIVE',
+            detectedAt: '2026-10-15T01:20:00Z',
+            symptom: 'API Gateway reporting 18% error rate on /v1/checkout/pay; Auth Service latency P99 jumped from 80ms to 4200ms'
+        }),
+        (inc)-[:AFFECTS {impactLevel: 'CRITICAL'}]->(s_auth),
+        (inc)-[:TRIGGERED_BY]->(c2),
+        (inc)-[:RECOMMENDED_RUNBOOK]->(rb_rollback)
+        """
     graph.query(incident_trigger)
 
     # Verification counts
