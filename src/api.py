@@ -16,6 +16,9 @@ from src.agent_orchestrator import IncidentSwarmOrchestrator
 from src.graph_tools import GraphTools
 from src.agent_memory import AgentMemoryEngine
 from scripts.seed_company_brain import seed_company_brain
+from src.code_parser import CodebaseParser
+from src.code_graph_seeder import CodebaseGraphSeeder
+from src.code_tools import CodebaseTools
 
 app = FastAPI(title="GraphOps: Autonomous Multi-Agent SRE Swarm", version="1.0.0")
 
@@ -294,6 +297,154 @@ async def chat_with_company_brain(req: ChatRequest) -> Dict[str, Any]:
         "answer": answer,
         "records": records
     }
+
+# =========================================================================
+# Codebase Intelligence & AST Call-Graph Endpoints
+# =========================================================================
+
+class CodebaseScanRequest(BaseModel):
+    repo_path: str = "."
+
+class BlastRadiusRequest(BaseModel):
+    function_name: str
+    max_hops: int = 4
+
+class RevertTicketRequest(BaseModel):
+    function_name: str
+    error_symptom: str = "Regression or incident detected in downstream service"
+
+@app.post("/api/codebase/scan")
+async def scan_and_ingest_codebase(req: CodebaseScanRequest) -> Dict[str, Any]:
+    """
+    Parses any target Git repository's AST functions, calls, and commits,
+    and seeds them into the FalkorDB 'codebase_graph' multigraph.
+    """
+    try:
+        parser = CodebaseParser(req.repo_path)
+        data = parser.parse_repository()
+        seeder = CodebaseGraphSeeder()
+        stats = seeder.ingest_codebase(data)
+        return {
+            "status": "SUCCESS",
+            "repository": data["repository"],
+            "repo_path": data["repo_path"],
+            "metrics": stats,
+            "parsed_summary": {
+                "files": len(data["files"]),
+                "functions": len(data["functions"]),
+                "calls": len(data["calls"]),
+                "commits": len(data["commits"])
+            }
+        }
+    except Exception as e:
+        return {"status": "ERROR", "error": str(e)}
+
+@app.get("/api/codebase/graph")
+async def get_codebase_graph_data() -> Dict[str, Any]:
+    """
+    Extracts nodes and relationships from FalkorDB's 'codebase_graph'
+    formatted for the interactive Vis.js canvas.
+    """
+    try:
+        tools = CodebaseTools()
+        node_query = "MATCH (n) RETURN id(n), labels(n), properties(n)"
+        edge_query = "MATCH (a)-[r]->(b) RETURN id(a), id(b), type(r), properties(r)"
+
+        n_res = tools.graph.query(node_query).result_set
+        e_res = tools.graph.query(edge_query).result_set
+
+        color_map = {
+            "Function": {"background": "#8b5cf6", "border": "#a78bfa", "highlight": "#c084fc"},
+            "File": {"background": "#0284c7", "border": "#38bdf8", "highlight": "#0ea5e9"},
+            "Commit": {"background": "#ea580c", "border": "#fb923c", "highlight": "#f97316"},
+            "Engineer": {"background": "#059669", "border": "#34d399", "highlight": "#10b981"},
+            "Repository": {"background": "#db2777", "border": "#f472b6", "highlight": "#f43f5e"}
+        }
+
+        nodes = []
+        for r in n_res:
+            nid = r[0]
+            label = r[1][0] if r[1] else "Entity"
+            props = dict(r[2]) if r[2] else {}
+
+            display_name = props.get("name") or props.get("id") or props.get("sha") or f"Node-{nid}"
+            if label == "Commit" and "sha" in props:
+                display_name = f"git {props['sha'][:7]}"
+
+            tooltip_lines = [f"<b>Type:</b> {label}"]
+            for k, v in props.items():
+                tooltip_lines.append(f"<b>{k}:</b> {v}")
+            tooltip = "<br>".join(tooltip_lines)
+
+            nodes.append({
+                "id": nid,
+                "label": display_name,
+                "group": label,
+                "title": tooltip,
+                "color": color_map.get(label, {"background": "#475569", "border": "#94a3b8", "highlight": "#64748b"}),
+                "shape": "diamond" if label == "Repository" else ("box" if label == "File" else "dot"),
+                "size": 22 if label in ["Repository", "Function"] else 15,
+                "font": {"color": "#ffffff", "face": "JetBrains Mono, monospace", "size": 11}
+            })
+
+        edges = []
+        for r in e_res:
+            from_id = r[0]
+            to_id = r[1]
+            rel_type = r[2]
+
+            edge_color = "#334155"
+            if rel_type == "CALLS":
+                edge_color = "#a855f7"
+            elif rel_type == "DEFINES":
+                edge_color = "#38bdf8"
+            elif rel_type == "CONTAINS":
+                edge_color = "#64748b"
+            elif rel_type == "MODIFIED":
+                edge_color = "#fb923c"
+            elif rel_type == "AUTHORED_BY":
+                edge_color = "#34d399"
+
+            edges.append({
+                "from": from_id,
+                "to": to_id,
+                "label": rel_type,
+                "color": {"color": edge_color, "highlight": "#c084fc"},
+                "arrows": "to",
+                "font": {"color": "#94a3b8", "size": 9, "align": "middle", "face": "JetBrains Mono, monospace"}
+            })
+
+        return {"nodes": nodes, "edges": edges}
+    except Exception as e:
+        return {"nodes": [], "edges": [], "error": str(e)}
+
+@app.post("/api/codebase/blast-radius")
+async def analyze_function_blast_radius(req: BlastRadiusRequest) -> Dict[str, Any]:
+    """Calculates multi-hop blast radius for a given function."""
+    try:
+        tools = CodebaseTools()
+        return tools.calculate_function_blast_radius(req.function_name, req.max_hops)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/codebase/revert-ticket")
+async def generate_code_revert_ticket(req: RevertTicketRequest) -> Dict[str, Any]:
+    """Automates Git author attribution and revert ticket creation."""
+    try:
+        tools = CodebaseTools()
+        return tools.generate_revert_ticket(req.function_name, req.error_symptom)
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.get("/api/codebase/critical")
+async def get_critical_functions() -> Dict[str, Any]:
+    """Returns functions with highest call centrality in the codebase."""
+    try:
+        tools = CodebaseTools()
+        funcs = tools.find_most_critical_functions(limit=10)
+        return {"critical_functions": funcs}
+    except Exception as e:
+        return {"error": str(e)}
 
 if __name__ == "__main__":
     import uvicorn
