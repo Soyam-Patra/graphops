@@ -1,51 +1,91 @@
 """
 Codebase AST & Git Parser.
-Analyzes Python codebases using Abstract Syntax Trees (AST) and Git metadata.
+Analyzes codebases using Python AST for Python files and regex extractors for C/Rust/JS.
 Extracts:
 - Files, Classes, and Functions (with line numbers & docstrings)
 - Function-to-Function call graph (who calls whom)
 - File-to-File import dependencies
 - Git commit blame & author attribution (who wrote/modified each function)
+Supports both local directories (e.g. '.') and remote GitHub repository URLs
+(e.g. 'https://github.com/FalkorDB/falkordb-py').
 """
 
 import ast
 import os
+import re
 import subprocess
 from typing import Dict, List, Any, Optional
 
 class CodebaseParser:
     def __init__(self, repo_path: str):
-        self.repo_path = os.path.abspath(repo_path)
+        raw_path = repo_path.strip()
+
+        # Handle remote Git / GitHub repository URLs
+        if raw_path.startswith(("http://", "https://", "git@")):
+            self.repo_url = raw_path
+            clean_url = raw_path.rstrip("/").removesuffix(".git")
+            repo_name = clean_url.split("/")[-1]
+            base_cache = os.path.join(os.path.abspath("."), ".repo_cache")
+            os.makedirs(base_cache, exist_ok=True)
+            target_dir = os.path.join(base_cache, repo_name)
+
+            if not os.path.exists(target_dir):
+                cmd = ["git", "clone", "--depth", "25", raw_path, target_dir]
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+                if res.returncode != 0:
+                    raise RuntimeError(f"Failed to clone repository: {res.stderr.strip() or res.stdout.strip()}")
+            else:
+                try:
+                    subprocess.run(["git", "pull"], cwd=target_dir, capture_output=True, timeout=15)
+                except Exception:
+                    pass
+
+            self.repo_path = os.path.abspath(target_dir)
+            self.display_name = repo_name
+        else:
+            self.repo_url = None
+            self.repo_path = os.path.abspath(raw_path)
+            self.display_name = os.path.basename(self.repo_path) or "repository"
 
     def parse_repository(self) -> Dict[str, Any]:
         """
-        Scans all Python files in the repository and builds the code entity model.
+        Scans code files in the repository and builds the graph entity model.
         """
+        if not os.path.exists(self.repo_path):
+            raise FileNotFoundError(f"Repository path does not exist: {self.repo_path}")
+
         files_data = []
         functions_data = []
         calls_data = []
         imports_data = []
 
-        ignore_dirs = {".git", ".venv", "venv", "__pycache__", "node_modules", "dist", "build"}
+        ignore_dirs = {".git", ".venv", "venv", "__pycache__", "node_modules", "dist", "build", "target", ".repo_cache"}
 
         for root, dirs, files in os.walk(self.repo_path):
             dirs[:] = [d for d in dirs if d not in ignore_dirs]
             for file in files:
+                full_path = os.path.join(root, file)
+                rel_path = os.path.relpath(full_path, self.repo_path).replace("\\", "/")
+
                 if file.endswith(".py"):
-                    full_path = os.path.join(root, file)
-                    rel_path = os.path.relpath(full_path, self.repo_path).replace("\\", "/")
-                    file_info = self._parse_file(full_path, rel_path)
+                    file_info = self._parse_python_file(full_path, rel_path)
                     if file_info:
                         files_data.append(file_info["file"])
                         functions_data.extend(file_info["functions"])
                         calls_data.extend(file_info["calls"])
                         imports_data.extend(file_info["imports"])
+                elif file.endswith((".c", ".h", ".cpp", ".rs", ".js", ".ts", ".go")):
+                    file_info = self._parse_generic_code_file(full_path, rel_path)
+                    if file_info:
+                        files_data.append(file_info["file"])
+                        functions_data.extend(file_info["functions"])
+                        calls_data.extend(file_info["calls"])
 
         # Extract git commit history and blame attribution
         commits_data = self._extract_git_history()
 
         return {
-            "repository": os.path.basename(self.repo_path),
+            "repository": self.display_name,
             "repo_path": self.repo_path,
             "files": files_data,
             "functions": functions_data,
@@ -54,14 +94,14 @@ class CodebaseParser:
             "commits": commits_data
         }
 
-    def _parse_file(self, full_path: str, rel_path: str) -> Optional[Dict[str, Any]]:
+    def _parse_python_file(self, full_path: str, rel_path: str) -> Optional[Dict[str, Any]]:
         """Parses an individual Python file with the AST engine."""
         try:
             with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
                 source_code = f.read()
 
             tree = ast.parse(source_code, filename=rel_path)
-        except Exception as e:
+        except Exception:
             return None
 
         file_node = {
@@ -156,11 +196,60 @@ class CodebaseParser:
             "imports": imports
         }
 
+    def _parse_generic_code_file(self, full_path: str, rel_path: str) -> Optional[Dict[str, Any]]:
+        """Parses C, C++, Rust, Go, or JS/TS files using regex function extractors."""
+        try:
+            with open(full_path, "r", encoding="utf-8", errors="ignore") as f:
+                lines = f.readlines()
+        except Exception:
+            return None
+
+        file_node = {
+            "path": rel_path,
+            "name": os.path.basename(rel_path),
+            "lines_of_code": len(lines)
+        }
+
+        functions = []
+        calls = []
+
+        # Function patterns for C/Rust/JS/Go
+        fn_pattern = re.compile(
+            r'^(?:pub\s+)?(?:fn|def|function|func)\s+([a-zA-Z_][a-zA-Z0-9_]*)\s*\(|'
+            r'^(?:[a-zA-Z_][a-zA-Z0-9_*]*\s+)+([a-zA-Z_][a-zA-Z0-9_]*)\s*\([^)]*\)\s*\{'
+        )
+
+        for line_no, line in enumerate(lines, start=1):
+            stripped = line.strip()
+            match = fn_pattern.match(stripped)
+            if match:
+                func_name = match.group(1) or match.group(2)
+                if func_name and func_name not in {"if", "for", "while", "switch"}:
+                    func_id = f"{rel_path}::{func_name}"
+                    functions.append({
+                        "id": func_id,
+                        "name": func_name,
+                        "file": rel_path,
+                        "class_name": None,
+                        "start_line": line_no,
+                        "end_line": line_no + 10,
+                        "args": [],
+                        "docstring": ""
+                    })
+
+        return {
+            "file": file_node,
+            "functions": functions,
+            "calls": calls
+        }
+
     def _extract_git_history(self) -> List[Dict[str, Any]]:
         """Extracts recent commit history and author information from git."""
         commits = []
+        code_exts = {".py", ".c", ".h", ".cpp", ".cc", ".rs", ".js", ".ts", ".go", ".java", ".md", ".json"}
+
         try:
-            cmd = ["git", "log", "-n", "15", "--pretty=format:%H|%an|%ae|%ad|%s", "--date=iso"]
+            cmd = ["git", "log", "-n", "20", "--pretty=format:%H|%an|%ae|%ad|%s", "--date=iso"]
             result = subprocess.run(cmd, cwd=self.repo_path, capture_output=True, text=True, check=True)
             lines = result.stdout.strip().splitlines()
 
@@ -171,7 +260,10 @@ class CodebaseParser:
                     # Get modified files for this commit
                     diff_cmd = ["git", "show", "--name-only", "--pretty=format:", sha]
                     diff_res = subprocess.run(diff_cmd, cwd=self.repo_path, capture_output=True, text=True)
-                    modified_files = [f.strip().replace("\\", "/") for f in diff_res.stdout.splitlines() if f.strip().endswith(".py")]
+                    modified_files = [
+                        f.strip().replace("\\", "/") for f in diff_res.stdout.splitlines()
+                        if any(f.strip().endswith(ext) for ext in code_exts)
+                    ]
 
                     commits.append({
                         "sha": sha[:8],

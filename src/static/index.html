@@ -309,12 +309,27 @@
           <p class="text-xs text-slate-400">Analyze any repository, parse AST function calls, trace git commit blame, and compute multi-hop function blast radius.</p>
         </div>
 
-        <div class="flex items-center gap-2 w-full md:w-auto">
-          <input id="repo-path-input" type="text" value="." placeholder="Repo path (e.g. . or /path/to/repo)"
-                 class="px-3 py-2 rounded-lg text-xs font-mono bg-slate-800 text-slate-200 border border-slate-700 outline-none focus:border-purple-500 w-full md:w-64">
-          <button id="btn-scan-codebase" onclick="scanCodebase()" class="px-4 py-2 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition flex items-center gap-1.5 whitespace-nowrap shadow-lg shadow-purple-600/25">
-            <i class="fa-solid fa-radar"></i> Ingest AST
-          </button>
+        <div class="flex flex-col gap-2 w-full md:w-auto">
+          <div class="flex items-center gap-2">
+            <input id="repo-path-input" type="text" value="https://github.com/FalkorDB/falkordb-py" placeholder="Local path (.) or GitHub URL"
+                   class="px-3 py-2 rounded-lg text-xs font-mono bg-slate-800 text-slate-200 border border-slate-700 outline-none focus:border-purple-500 w-full md:w-80">
+            <button id="btn-scan-codebase" onclick="scanCodebase()" class="px-4 py-2 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition flex items-center gap-1.5 whitespace-nowrap shadow-lg shadow-purple-600/25">
+              <i class="fa-solid fa-radar"></i> Ingest AST
+            </button>
+          </div>
+          <!-- Quick Preset Chips -->
+          <div class="flex flex-wrap items-center gap-1.5 text-[11px] mono">
+            <span class="text-slate-400">Presets:</span>
+            <button onclick="setRepoPreset('https://github.com/FalkorDB/falkordb-py')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-purple-900/50 text-purple-300 border border-purple-500/30 transition">
+              🐍 FalkorDB Python SDK
+            </button>
+            <button onclick="setRepoPreset('https://github.com/FalkorDB/FalkorDB')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-purple-900/50 text-purple-300 border border-purple-500/30 transition">
+              🔥 FalkorDB Core
+            </button>
+            <button onclick="setRepoPreset('.')" class="px-2 py-0.5 rounded bg-slate-800 hover:bg-purple-900/50 text-purple-300 border border-purple-500/30 transition">
+              📍 Local GraphOps
+            </button>
+          </div>
         </div>
       </div>
 
@@ -531,12 +546,36 @@
       }
     }
 
+    function setRepoPreset(url) {
+      document.getElementById('repo-path-input').value = url;
+      scanCodebase();
+    }
+
     // Initialize Vis.js Interactive Canvas for Codebase AST Graph
     async function initCodebaseGraphCanvas() {
       try {
         const res = await fetch('/api/codebase/graph');
         const data = await res.json();
         rawCodeNodesList = data.nodes || [];
+
+        const funcs = rawCodeNodesList.filter(n => n.group === 'Function');
+        const files = rawCodeNodesList.filter(n => n.group === 'File');
+        const commits = rawCodeNodesList.filter(n => n.group === 'Commit');
+        const calls = (data.edges || []).filter(e => e.label === 'CALLS');
+
+        if (funcs.length > 0 || files.length > 0) {
+          document.getElementById('stat-code-files').innerText = files.length;
+          document.getElementById('stat-code-funcs').innerText = funcs.length;
+          document.getElementById('stat-code-calls').innerText = calls.length;
+          document.getElementById('stat-code-commits').innerText = commits.length;
+
+          // Auto-select first function if input is empty
+          if (!document.getElementById('func-input').value && funcs.length > 0) {
+            document.getElementById('func-input').value = funcs[0].label;
+            runFunctionBlast();
+            runGenerateRevertTicket();
+          }
+        }
 
         const container = document.getElementById('codebase-network');
         const visNodes = new vis.DataSet(data.nodes || []);
@@ -583,7 +622,7 @@
       const repoPath = document.getElementById('repo-path-input').value.trim() || '.';
       const btn = document.getElementById('btn-scan-codebase');
       btn.disabled = true;
-      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Parsing AST...';
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Ingesting (Cloning)...';
 
       try {
         const res = await fetch('/api/codebase/scan', {
@@ -601,7 +640,7 @@
           await initCodebaseGraphCanvas();
           await loadCriticalFunctions();
         } else {
-          alert("Scan Error: " + data.error);
+          alert("Scan Error: " + (data.error || "Unknown error"));
         }
       } catch (e) {
         alert("Scan request failed: " + e.message);

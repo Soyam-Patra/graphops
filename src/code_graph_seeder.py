@@ -45,8 +45,16 @@ class CodebaseGraphSeeder:
             {"name": repo_name, "path": repo_path}
         )
 
-        # 3. Create Files and link to Repository
-        for f in repo_data.get("files", []):
+        # 3. Filter and limit entities for optimal graph performance
+        files_to_ingest = repo_data.get("files", [])[:60]
+        file_paths_set = {f["path"] for f in files_to_ingest}
+        funcs_to_ingest = [fn for fn in repo_data.get("functions", []) if fn["file"] in file_paths_set][:250]
+        func_ids_set = {fn["id"] for fn in funcs_to_ingest}
+        calls_to_ingest = [c for c in repo_data.get("calls", []) if c["caller_func"] in func_ids_set][:350]
+        commits_to_ingest = repo_data.get("commits", [])[:20]
+
+        # Create Files and link to Repository
+        for f in files_to_ingest:
             self.graph.query("""
             MATCH (r:Repository {name: $repo_name})
             CREATE (file:File {path: $path, name: $name, loc: $loc})
@@ -59,7 +67,7 @@ class CodebaseGraphSeeder:
             })
 
         # 4. Create Functions and link to Files
-        for fn in repo_data.get("functions", []):
+        for fn in funcs_to_ingest:
             self.graph.query("""
             MATCH (file:File {path: $file_path})
             CREATE (func:Function {
@@ -81,8 +89,7 @@ class CodebaseGraphSeeder:
             })
 
         # 5. Connect Function Calls
-        for call in repo_data.get("calls", []):
-            # Match caller function and any defined function matching callee_name
+        for call in calls_to_ingest:
             self.graph.query("""
             MATCH (caller:Function {id: $caller_id})
             MATCH (callee:Function {name: $callee_name})
@@ -95,7 +102,7 @@ class CodebaseGraphSeeder:
             })
 
         # 6. Ingest Git Commits & Engineers
-        for c in repo_data.get("commits", []):
+        for c in commits_to_ingest:
             # Upsert Engineer & Commit
             self.graph.query("""
             MERGE (eng:Engineer {email: $email})
