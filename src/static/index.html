@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GraphOps | Autonomous Multi-Agent SRE Swarm</title>
+  <title>GraphOps | Autonomous Multi-Agent SRE & Codebase Intelligence Swarm</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
@@ -11,7 +11,7 @@
     @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Inter:wght@400;500;600;700&display=swap');
     body { font-family: 'Inter', sans-serif; }
     .mono { font-family: 'JetBrains Mono', monospace; }
-    #graph-network { width: 100%; height: 520px; outline: none; }
+    #graph-network, #codebase-network { width: 100%; height: 520px; outline: none; }
     .custom-scrollbar::-webkit-scrollbar { width: 6px; }
     .custom-scrollbar::-webkit-scrollbar-track { background: #0f172a; }
     .custom-scrollbar::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
@@ -30,7 +30,7 @@
           <h1 class="font-bold text-lg tracking-tight flex items-center gap-2">
             GraphOps <span class="text-[10px] uppercase font-bold tracking-wider px-2 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800/80 mono">FalkorDB Swarm</span>
           </h1>
-          <p class="text-xs text-slate-400 mono">WeMakeDevs "Graph Hacks" Oct 15–18, 2026</p>
+          <p class="text-xs text-slate-400 mono">WeMakeDevs & FalkorDB "Graph Hacks" Oct 15–18, 2026</p>
         </div>
       </div>
       <div class="flex items-center gap-3">
@@ -93,194 +93,346 @@
       </div>
     </div>
 
-    <!-- Live Metrics Counter Bar -->
-    <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-        <span class="text-xs text-slate-400 mono">Company Brain Nodes</span>
-        <div id="stat-nodes" class="text-2xl font-bold mt-1 text-white mono">24</div>
-        <span class="text-[11px] text-slate-500">Services, Teams, Commits</span>
-      </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-        <span class="text-xs text-slate-400 mono">Graph Relationships</span>
-        <div id="stat-edges" class="text-2xl font-bold mt-1 text-white mono">29</div>
-        <span class="text-[11px] text-slate-500">CALLS, DEPENDS_ON, OWNS</span>
-      </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-        <span class="text-xs text-slate-400 mono">Active Outage State</span>
-        <div id="stat-incident" class="text-2xl font-bold mt-1 mono text-rose-500 animate-pulse">ACTIVE</div>
-        <span id="stat-severity" class="text-[11px] text-slate-500">INC-2026-881 (SEV-1)</span>
-      </div>
-      <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
-        <span class="text-xs text-slate-400 mono">Persisted Episodes</span>
-        <div id="stat-episodes" class="text-2xl font-bold mt-1 text-emerald-400 mono">--</div>
-        <span class="text-[11px] text-slate-500">FalkorDB Swarm Memory</span>
-      </div>
+    <!-- Mode Selector Tabs -->
+    <div class="flex items-center gap-3 border-b border-slate-800 pb-3">
+      <button id="tab-btn-infra" onclick="switchTab('infra')" class="px-4 py-2 rounded-lg text-xs font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center gap-2 transition">
+        <i class="fa-solid fa-server"></i> Microservices & Incident Swarm
+      </button>
+      <button id="tab-btn-codebase" onclick="switchTab('codebase')" class="px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 flex items-center gap-2 transition">
+        <i class="fa-solid fa-code-fork"></i> Codebase AST & Git Blame Reader
+      </button>
     </div>
 
-    <!-- Chaos Control Banner -->
-    <div class="bg-gradient-to-r from-slate-900 via-indigo-950/50 to-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
-      <div class="space-y-1">
-        <div class="flex items-center gap-2">
-          <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 mono">Chaos Engine</span>
-          <h2 class="text-base font-bold">Autonomous Swarm Control Panel</h2>
+    <!-- ========================================================================= -->
+    <!-- VIEW 1: INFRASTRUCTURE & INCIDENT SWARM -->
+    <!-- ========================================================================= -->
+    <div id="view-infra" class="space-y-6">
+      <!-- Live Metrics Counter Bar -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Company Brain Nodes</span>
+          <div id="stat-nodes" class="text-2xl font-bold mt-1 text-white mono">24</div>
+          <span class="text-[11px] text-slate-500">Services, Teams, Commits</span>
         </div>
-        <p class="text-xs text-slate-400">Select an outage scenario, inject it into FalkorDB, and watch the agents coordinate in real-time.</p>
-      </div>
-
-      <div class="flex flex-wrap items-center gap-3">
-        <!-- Scenario Selector -->
-        <select id="scenario-select" class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 text-slate-200 border border-slate-700 outline-none focus:border-cyan-500">
-          <option value="bad_deployment">Scenario A: Bad Git Commit (Auth Service Rollback)</option>
-          <option value="db_pool_leak">Scenario B: DB Connection Leak (CockroachDB Pool Saturation)</option>
-          <option value="traffic_spike">Scenario C: Inbound Traffic Surge (Gateway Circuit Breaker)</option>
-        </select>
-
-        <button id="btn-reset" onclick="resetGraph()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1.5">
-          <i class="fa-solid fa-rotate-left"></i> Re-Seed
-        </button>
-
-        <button id="btn-swarm" onclick="runSwarm()" class="px-5 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-cyan-500 to-indigo-500 text-slate-950 hover:brightness-110 transition shadow-lg shadow-cyan-500/25 flex items-center gap-2">
-          <i class="fa-solid fa-play"></i> Run Autonomous Swarm
-        </button>
-      </div>
-    </div>
-
-    <!-- Embedded Live Interactive Graph Canvas -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
-      <div class="px-5 py-3 border-b border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3">
-        <div class="flex items-center gap-2">
-          <span class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></span>
-          <h3 class="font-bold text-sm">FalkorDB Live Topology Canvas</h3>
-          <span class="text-xs text-slate-500 mono">(Interactive GraphBLAS Engine)</span>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Graph Relationships</span>
+          <div id="stat-edges" class="text-2xl font-bold mt-1 text-white mono">29</div>
+          <span class="text-[11px] text-slate-500">CALLS, DEPENDS_ON, OWNS</span>
         </div>
-        <!-- Legend -->
-        <div class="flex flex-wrap items-center gap-3 text-[11px] mono text-slate-400">
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-[#0284c7]"></span> Service</span>
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span> Database</span>
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#d97706]"></span> Team</span>
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#059669]"></span> Engineer</span>
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#dc2626]"></span> Incident</span>
-          <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#ea580c]"></span> Commit</span>
-          <button onclick="network.fit()" class="text-cyan-400 hover:text-cyan-300 ml-2" title="Fit to Screen"><i class="fa-solid fa-expand"></i></button>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Active Outage State</span>
+          <div id="stat-incident" class="text-2xl font-bold mt-1 mono text-rose-500 animate-pulse">ACTIVE</div>
+          <span id="stat-severity" class="text-[11px] text-slate-500">INC-2026-881 (SEV-1)</span>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Persisted Episodes</span>
+          <div id="stat-episodes" class="text-2xl font-bold mt-1 text-emerald-400 mono">--</div>
+          <span class="text-[11px] text-slate-500">FalkorDB Swarm Memory</span>
         </div>
       </div>
-      <div class="relative">
-        <div id="graph-network" class="bg-slate-950"></div>
-        <div id="graph-hint" class="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur border border-slate-800 rounded px-2.5 py-1 text-[11px] text-slate-400 mono">
-          💡 Click any node to inspect live Cypher properties
-        </div>
-      </div>
-    </div>
 
-    <!-- Live Execution & Swarm Results Section -->
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-
-      <!-- Left Column: Chronological Agent Execution Log -->
-      <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col">
-        <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
+      <!-- Chaos Control Banner -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950/50 to-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+        <div class="space-y-1">
           <div class="flex items-center gap-2">
-            <span class="w-3 h-3 rounded-full bg-cyan-400"></span>
-            <h3 class="font-bold text-sm">Agent Reasoning & Traceability Log</h3>
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-rose-500/20 text-rose-400 border border-rose-500/30 mono">Chaos Engine</span>
+            <h2 class="text-base font-bold">Autonomous Swarm Control Panel</h2>
           </div>
-          <span id="session-badge" class="text-xs text-slate-400 mono">Session: Idle</span>
+          <p class="text-xs text-slate-400">Select an outage scenario, inject it into FalkorDB, and watch the agents coordinate in real-time.</p>
         </div>
-        <div id="terminal-feed" class="flex-1 space-y-3 mono text-xs overflow-y-auto max-h-[460px] p-2.5 bg-slate-950 rounded-lg border border-slate-800/80 custom-scrollbar">
-          <div class="text-slate-500">// Waiting for swarm trigger... Click 'Run Autonomous Swarm' above.</div>
+
+        <div class="flex flex-wrap items-center gap-3">
+          <!-- Scenario Selector -->
+          <select id="scenario-select" class="px-3 py-2 rounded-lg text-xs font-medium bg-slate-800 text-slate-200 border border-slate-700 outline-none focus:border-cyan-500">
+            <option value="bad_deployment">Scenario A: Bad Git Commit (Auth Service Rollback)</option>
+            <option value="db_pool_leak">Scenario B: DB Connection Leak (CockroachDB Pool Saturation)</option>
+            <option value="traffic_spike">Scenario C: Inbound Traffic Surge (Gateway Circuit Breaker)</option>
+          </select>
+
+          <button id="btn-reset" onclick="resetGraph()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-rotate-left"></i> Re-Seed
+          </button>
+
+          <button id="btn-swarm" onclick="runSwarm()" class="px-5 py-2 rounded-lg text-xs font-bold bg-gradient-to-r from-cyan-500 to-indigo-500 text-slate-950 hover:brightness-110 transition shadow-lg shadow-cyan-500/25 flex items-center gap-2">
+            <i class="fa-solid fa-play"></i> Run Autonomous Swarm
+          </button>
         </div>
       </div>
 
-      <!-- Right Column: Swarm Findings & Artifacts -->
-      <div class="space-y-6">
-
-        <!-- Blast Radius Card -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <div class="flex items-center gap-2 mb-3">
-            <i class="fa-solid fa-radar text-rose-400 text-sm"></i>
-            <h4 class="font-bold text-sm">Blast Radius Analysis</h4>
+      <!-- Embedded Live Interactive Graph Canvas -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+        <div class="px-5 py-3 border-b border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-cyan-400 animate-pulse"></span>
+            <h3 class="font-bold text-sm">FalkorDB Live Topology Canvas</h3>
+            <span class="text-xs text-slate-500 mono">(Interactive GraphBLAS Engine)</span>
           </div>
-          <div id="blast-content" class="text-xs text-slate-400 space-y-2">
-            <p>Awaiting investigation...</p>
-          </div>
-        </div>
-
-        <!-- Root Cause & Runbook Card -->
-        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <div class="flex items-center gap-2 mb-3">
-            <i class="fa-solid fa-code-commit text-amber-400 text-sm"></i>
-            <h4 class="font-bold text-sm">Root-Cause & Runbook</h4>
-          </div>
-          <div id="cause-content" class="text-xs text-slate-400 space-y-2">
-            <p>Awaiting investigation...</p>
+          <!-- Legend -->
+          <div class="flex flex-wrap items-center gap-3 text-[11px] mono text-slate-400">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-[#0284c7]"></span> Service</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#7c3aed]"></span> Database</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#d97706]"></span> Team</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#059669]"></span> Engineer</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#dc2626]"></span> Incident</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#ea580c]"></span> Commit</span>
+            <button onclick="network.fit()" class="text-cyan-400 hover:text-cyan-300 ml-2" title="Fit to Screen"><i class="fa-solid fa-expand"></i></button>
           </div>
         </div>
+        <div class="relative">
+          <div id="graph-network" class="bg-slate-950"></div>
+          <div id="graph-hint" class="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur border border-slate-800 rounded px-2.5 py-1 text-[11px] text-slate-400 mono">
+            💡 Click any node to inspect live Cypher properties
+          </div>
+        </div>
+      </div>
 
-        <!-- Node Inspector Drawer -->
-        <div id="node-inspector" class="bg-slate-900 border border-slate-800 rounded-xl p-5">
-          <div class="flex items-center justify-between mb-3">
+      <!-- Live Execution & Swarm Results Section -->
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Left Column: Chronological Agent Execution Log -->
+        <div class="lg:col-span-2 bg-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col">
+          <div class="flex items-center justify-between pb-3 border-b border-slate-800 mb-4">
             <div class="flex items-center gap-2">
-              <i class="fa-solid fa-circle-info text-cyan-400 text-sm"></i>
-              <h4 class="font-bold text-sm">Node Property Inspector</h4>
+              <span class="w-3 h-3 rounded-full bg-cyan-400"></span>
+              <h3 class="font-bold text-sm">Agent Reasoning & Traceability Log</h3>
             </div>
-            <span id="inspector-type" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 mono text-slate-300">Select Node</span>
+            <span id="session-badge" class="text-xs text-slate-400 mono">Session: Idle</span>
           </div>
-          <div id="inspector-content" class="text-xs text-slate-400 mono space-y-1">
-            <p class="text-slate-500 italic">Click any node on the graph canvas above to inspect live FalkorDB properties.</p>
+          <div id="terminal-feed" class="flex-1 space-y-3 mono text-xs overflow-y-auto max-h-[460px] p-2.5 bg-slate-950 rounded-lg border border-slate-800/80 custom-scrollbar">
+            <div class="text-slate-500">// Waiting for swarm trigger... Click 'Run Autonomous Swarm' above.</div>
           </div>
         </div>
 
+        <!-- Right Column: Swarm Findings & Artifacts -->
+        <div class="space-y-6">
+          <!-- Blast Radius Card -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <i class="fa-solid fa-radar text-rose-400 text-sm"></i>
+              <h4 class="font-bold text-sm">Blast Radius Analysis</h4>
+            </div>
+            <div id="blast-content" class="text-xs text-slate-400 space-y-2">
+              <p>Awaiting investigation...</p>
+            </div>
+          </div>
+
+          <!-- Root Cause & Runbook Card -->
+          <div class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div class="flex items-center gap-2 mb-3">
+              <i class="fa-solid fa-code-commit text-amber-400 text-sm"></i>
+              <h4 class="font-bold text-sm">Root-Cause & Runbook</h4>
+            </div>
+            <div id="cause-content" class="text-xs text-slate-400 space-y-2">
+              <p>Awaiting investigation...</p>
+            </div>
+          </div>
+
+          <!-- Node Inspector Drawer -->
+          <div id="node-inspector" class="bg-slate-900 border border-slate-800 rounded-xl p-5">
+            <div class="flex items-center justify-between mb-3">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-circle-info text-cyan-400 text-sm"></i>
+                <h4 class="font-bold text-sm">Node Property Inspector</h4>
+              </div>
+              <span id="inspector-type" class="text-[10px] px-2 py-0.5 rounded bg-slate-800 mono text-slate-300">Select Node</span>
+            </div>
+            <div id="inspector-content" class="text-xs text-slate-400 mono space-y-1">
+              <p class="text-slate-500 italic">Click any node on the graph canvas above to inspect live FalkorDB properties.</p>
+            </div>
+          </div>
+        </div>
       </div>
 
+      <!-- Company Brain Q&A Assistant (Track 3 Hero Feature) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-comments text-indigo-400"></i>
+            <h3 class="font-bold text-sm">Company Brain Q&A Assistant</h3>
+            <span class="text-xs text-slate-500 mono">(Natural Language to Cypher)</span>
+          </div>
+          <span class="text-xs text-indigo-400 mono">Track 3: Connected Org Intelligence</span>
+        </div>
+
+        <!-- Quick Question Chips -->
+        <div class="flex flex-wrap gap-2 text-xs">
+          <button onclick="askQuestion('Who is on call right now?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            📞 Who is on call?
+          </button>
+          <button onclick="askQuestion('Which service is our highest single point of failure?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            ⚠️ Highest Bottleneck / Choke Point
+          </button>
+          <button onclick="askQuestion('Show me all database dependencies')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            🗄️ Database Dependencies
+          </button>
+          <button onclick="askQuestion('What are the recent code deployments?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            🚀 Recent Git Commits
+          </button>
+          <button onclick="askQuestion('Which team owns which services?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
+            👥 Team Ownership Roster
+          </button>
+        </div>
+
+        <!-- Chat Input -->
+        <div class="flex gap-2">
+          <input id="chat-input" type="text" placeholder="Ask anything about the company (e.g. 'Who is on call?' or type raw Cypher: 'MATCH (s:Service) RETURN s.name')..."
+                 onkeydown="if(event.key === 'Enter') submitChat()"
+                 class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 mono">
+          <button onclick="submitChat()" class="px-5 py-2.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1.5">
+            <i class="fa-solid fa-paper-plane"></i> Ask Graph
+          </button>
+        </div>
+
+        <!-- Chat Response Window -->
+        <div id="chat-response" class="hidden bg-slate-950 border border-slate-800/80 rounded-lg p-4 text-xs space-y-3 mono">
+          <div class="flex items-center justify-between text-slate-500 text-[11px] pb-2 border-b border-slate-800">
+            <span>Generated Cypher Query</span>
+            <span class="text-emerald-400">FalkorDB Executed</span>
+          </div>
+          <pre id="chat-cypher" class="text-cyan-400 overflow-x-auto p-2 rounded bg-slate-900 border border-slate-800"></pre>
+          <div id="chat-answer" class="text-slate-200 whitespace-pre-wrap leading-relaxed font-sans text-sm"></div>
+        </div>
+      </div>
     </div>
 
-    <!-- Company Brain Q&A Assistant (Track 3 Hero Feature) -->
-    <div class="bg-slate-900 border border-slate-800 rounded-xl p-6 space-y-4">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-comments text-indigo-400"></i>
-          <h3 class="font-bold text-sm">Company Brain Q&A Assistant</h3>
-          <span class="text-xs text-slate-500 mono">(Natural Language to Cypher)</span>
+    <!-- ========================================================================= -->
+    <!-- VIEW 2: CODEBASE AST & GIT BLAME ANALYZER -->
+    <!-- ========================================================================= -->
+    <div id="view-codebase" class="hidden space-y-6">
+
+      <!-- Scanner Control Banner -->
+      <div class="bg-gradient-to-r from-slate-900 via-purple-950/40 to-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-purple-500/20 text-purple-400 border border-purple-500/30 mono">AST & Blame Engine</span>
+            <h2 class="text-base font-bold">Codebase AST Call-Graph & Blame Explorer</h2>
+          </div>
+          <p class="text-xs text-slate-400">Analyze any repository, parse AST function calls, trace git commit blame, and compute multi-hop function blast radius.</p>
         </div>
-        <span class="text-xs text-indigo-400 mono">Track 3: Connected Org Intelligence</span>
-      </div>
 
-      <!-- Quick Question Chips -->
-      <div class="flex flex-wrap gap-2 text-xs">
-        <button onclick="askQuestion('Who is on call right now?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
-          📞 Who is on call?
-        </button>
-        <button onclick="askQuestion('Which service is our highest single point of failure?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
-          ⚠️ Highest Bottleneck / Choke Point
-        </button>
-        <button onclick="askQuestion('Show me all database dependencies')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
-          🗄️ Database Dependencies
-        </button>
-        <button onclick="askQuestion('What are the recent code deployments?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
-          🚀 Recent Git Commits
-        </button>
-        <button onclick="askQuestion('Which team owns which services?')" class="px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700/80 transition">
-          👥 Team Ownership Roster
-        </button>
-      </div>
-
-      <!-- Chat Input -->
-      <div class="flex gap-2">
-        <input id="chat-input" type="text" placeholder="Ask anything about the company (e.g. 'Who is on call?' or type raw Cypher: 'MATCH (s:Service) RETURN s.name')..."
-               onkeydown="if(event.key === 'Enter') submitChat()"
-               class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-4 py-2.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 mono">
-        <button onclick="submitChat()" class="px-5 py-2.5 rounded-lg text-xs font-semibold bg-indigo-600 hover:bg-indigo-500 text-white transition flex items-center gap-1.5">
-          <i class="fa-solid fa-paper-plane"></i> Ask Graph
-        </button>
-      </div>
-
-      <!-- Chat Response Window -->
-      <div id="chat-response" class="hidden bg-slate-950 border border-slate-800/80 rounded-lg p-4 text-xs space-y-3 mono">
-        <div class="flex items-center justify-between text-slate-500 text-[11px] pb-2 border-b border-slate-800">
-          <span>Generated Cypher Query</span>
-          <span class="text-emerald-400">FalkorDB Executed</span>
+        <div class="flex items-center gap-2 w-full md:w-auto">
+          <input id="repo-path-input" type="text" value="." placeholder="Repo path (e.g. . or /path/to/repo)"
+                 class="px-3 py-2 rounded-lg text-xs font-mono bg-slate-800 text-slate-200 border border-slate-700 outline-none focus:border-purple-500 w-full md:w-64">
+          <button id="btn-scan-codebase" onclick="scanCodebase()" class="px-4 py-2 rounded-lg text-xs font-bold bg-purple-600 hover:bg-purple-500 text-white transition flex items-center gap-1.5 whitespace-nowrap shadow-lg shadow-purple-600/25">
+            <i class="fa-solid fa-radar"></i> Ingest AST
+          </button>
         </div>
-        <pre id="chat-cypher" class="text-cyan-400 overflow-x-auto p-2 rounded bg-slate-900 border border-slate-800"></pre>
-        <div id="chat-answer" class="text-slate-200 whitespace-pre-wrap leading-relaxed font-sans text-sm"></div>
       </div>
+
+      <!-- Codebase Stats Bar -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Files Ingested</span>
+          <div id="stat-code-files" class="text-2xl font-bold mt-1 text-sky-400 mono">--</div>
+          <span class="text-[11px] text-slate-500">Python AST Modules</span>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Functions Defined</span>
+          <div id="stat-code-funcs" class="text-2xl font-bold mt-1 text-purple-400 mono">--</div>
+          <span class="text-[11px] text-slate-500">Call-Graph Target Nodes</span>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">AST Call Links</span>
+          <div id="stat-code-calls" class="text-2xl font-bold mt-1 text-emerald-400 mono">--</div>
+          <span class="text-[11px] text-slate-500">CALLS Relationships</span>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Git Commits Traced</span>
+          <div id="stat-code-commits" class="text-2xl font-bold mt-1 text-amber-400 mono">--</div>
+          <span class="text-[11px] text-slate-500">MODIFIED & AUTHORED_BY</span>
+        </div>
+      </div>
+
+      <!-- Codebase Interactive Graph Canvas -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl overflow-hidden shadow-2xl">
+        <div class="px-5 py-3 border-b border-slate-800 bg-slate-900/90 flex flex-wrap items-center justify-between gap-3">
+          <div class="flex items-center gap-2">
+            <span class="w-3 h-3 rounded-full bg-purple-400 animate-pulse"></span>
+            <h3 class="font-bold text-sm">FalkorDB Codebase Graph (AST & Git Commits)</h3>
+            <span class="text-xs text-slate-500 mono">(Multigraph: codebase_graph)</span>
+          </div>
+          <!-- Legend -->
+          <div class="flex flex-wrap items-center gap-3 text-[11px] mono text-slate-400">
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#8b5cf6]"></span> Function</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-sm bg-[#0284c7]"></span> File</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#ea580c]"></span> Commit</span>
+            <span class="flex items-center gap-1.5"><span class="w-2.5 h-2.5 rounded-full bg-[#059669]"></span> Engineer</span>
+            <button onclick="codebaseNetwork && codebaseNetwork.fit()" class="text-purple-400 hover:text-purple-300 ml-2" title="Fit to Screen"><i class="fa-solid fa-expand"></i></button>
+          </div>
+        </div>
+        <div class="relative">
+          <div id="codebase-network" class="bg-slate-950"></div>
+          <div class="absolute bottom-3 left-3 bg-slate-900/80 backdrop-blur border border-slate-800 rounded px-2.5 py-1 text-[11px] text-slate-400 mono">
+            💡 Click any Function node to calculate its multi-hop Blast Radius and Git blame
+          </div>
+        </div>
+      </div>
+
+      <!-- Codebase Investigation Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Left: Function Blast Radius Explorer -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-diagram-project text-rose-400"></i>
+              <h4 class="font-bold text-sm">Function Blast Radius Calculator</h4>
+            </div>
+            <span class="text-xs text-rose-400 mono">CALLS*1..4 Traversal</span>
+          </div>
+
+          <div class="flex gap-2">
+            <input id="func-input" type="text" placeholder="Enter function name (e.g. calculate_function_blast_radius)"
+                   class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 mono outline-none focus:border-rose-500">
+            <button onclick="runFunctionBlast()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-500 text-white transition flex items-center gap-1.5">
+              <i class="fa-solid fa-radar"></i> Analyze
+            </button>
+          </div>
+
+          <div id="func-blast-results" class="bg-slate-950 border border-slate-800 rounded-lg p-4 text-xs space-y-3 mono">
+            <p class="text-slate-500 italic">Enter a function name or click any Function node in the canvas above.</p>
+          </div>
+        </div>
+
+        <!-- Right: Automated Git Revert Ticket Generator -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-ticket text-emerald-400"></i>
+              <h4 class="font-bold text-sm">Automated Git Revert Ticket</h4>
+            </div>
+            <span class="text-xs text-emerald-400 mono">Blame & Remediation Handoff</span>
+          </div>
+
+          <div class="flex gap-2">
+            <input id="symptom-input" type="text" placeholder="Error symptom (e.g. TypeError: unexpected keyword argument)"
+                   value="Regression detected in downstream caller"
+                   class="flex-1 bg-slate-950 border border-slate-800 rounded-lg px-3 py-2 text-xs text-slate-200 mono outline-none focus:border-emerald-500">
+            <button onclick="runGenerateRevertTicket()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white transition flex items-center gap-1.5">
+              <i class="fa-solid fa-wrench"></i> Generate Ticket
+            </button>
+          </div>
+
+          <div id="ticket-results" class="bg-slate-950 border border-slate-800 rounded-lg p-4 text-xs space-y-2 mono">
+            <p class="text-slate-500 italic">Click 'Generate Ticket' to compute commit blame and remediation instructions.</p>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Foundational Functions (Choke Points / Degree Centrality) -->
+      <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-3">
+        <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-cubes-stacked text-amber-400"></i>
+            <h4 class="font-bold text-sm">Most Critical Foundational Functions (Degree Centrality)</h4>
+          </div>
+          <span class="text-xs text-slate-400 mono">Top Architectural Choke Points</span>
+        </div>
+        <div id="critical-funcs-table" class="overflow-x-auto text-xs mono">
+          <p class="text-slate-500 italic">Click 'Ingest AST' above to calculate call centrality across the codebase.</p>
+        </div>
+      </div>
+
     </div>
 
   </main>
@@ -292,10 +444,39 @@
 
   <script>
     let network = null;
+    let codebaseNetwork = null;
     let graphData = { nodes: [], edges: [] };
     let rawNodesList = [];
+    let rawCodeNodesList = [];
 
-    // Initialize Vis.js Interactive Graph Canvas
+    // Switch between Microservices view and Codebase view
+    function switchTab(tab) {
+      const infraBtn = document.getElementById('tab-btn-infra');
+      const codeBtn = document.getElementById('tab-btn-codebase');
+      const infraView = document.getElementById('view-infra');
+      const codeView = document.getElementById('view-codebase');
+
+      if (tab === 'infra') {
+        infraView.classList.remove('hidden');
+        codeView.classList.add('hidden');
+        infraBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center gap-2 transition';
+        codeBtn.className = 'px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 flex items-center gap-2 transition';
+        if (network) network.fit();
+      } else {
+        infraView.classList.add('hidden');
+        codeView.classList.remove('hidden');
+        codeBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 flex items-center gap-2 transition';
+        infraBtn.className = 'px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 flex items-center gap-2 transition';
+        if (!codebaseNetwork) {
+          initCodebaseGraphCanvas();
+          loadCriticalFunctions();
+        } else {
+          codebaseNetwork.fit();
+        }
+      }
+    }
+
+    // Initialize Vis.js Interactive Graph Canvas for Microservices
     async function initGraphCanvas() {
       try {
         const res = await fetch('/api/graph-data');
@@ -329,7 +510,6 @@
 
         network = new vis.Network(container, graphData, options);
 
-        // Click on node to inspect properties
         network.on('click', function(params) {
           if (params.nodes.length > 0) {
             const nodeId = params.nodes[0];
@@ -348,6 +528,227 @@
 
       } catch (err) {
         console.error("Failed to load graph data:", err);
+      }
+    }
+
+    // Initialize Vis.js Interactive Canvas for Codebase AST Graph
+    async function initCodebaseGraphCanvas() {
+      try {
+        const res = await fetch('/api/codebase/graph');
+        const data = await res.json();
+        rawCodeNodesList = data.nodes || [];
+
+        const container = document.getElementById('codebase-network');
+        const visNodes = new vis.DataSet(data.nodes || []);
+        const visEdges = new vis.DataSet(data.edges || []);
+
+        const options = {
+          physics: {
+            solver: 'forceAtlas2Based',
+            forceAtlas2Based: {
+              gravitationalConstant: -35,
+              centralGravity: 0.006,
+              springLength: 90,
+              springConstant: 0.15
+            },
+            maxVelocity: 40,
+            stabilization: { iterations: 100 }
+          },
+          interaction: {
+            hover: true,
+            tooltipDelay: 150,
+            zoomView: true
+          }
+        };
+
+        codebaseNetwork = new vis.Network(container, { nodes: visNodes, edges: visEdges }, options);
+
+        codebaseNetwork.on('click', function(params) {
+          if (params.nodes.length > 0) {
+            const nodeId = params.nodes[0];
+            const nodeObj = rawCodeNodesList.find(n => n.id === nodeId);
+            if (nodeObj && nodeObj.group === 'Function') {
+              document.getElementById('func-input').value = nodeObj.label;
+              runFunctionBlast();
+              runGenerateRevertTicket();
+            }
+          }
+        });
+      } catch (e) {
+        console.error("Failed to load codebase graph:", e);
+      }
+    }
+
+    async function scanCodebase() {
+      const repoPath = document.getElementById('repo-path-input').value.trim() || '.';
+      const btn = document.getElementById('btn-scan-codebase');
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Parsing AST...';
+
+      try {
+        const res = await fetch('/api/codebase/scan', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ repo_path: repoPath })
+        });
+        const data = await res.json();
+        if (data.status === 'SUCCESS') {
+          document.getElementById('stat-code-files').innerText = data.parsed_summary.files;
+          document.getElementById('stat-code-funcs').innerText = data.parsed_summary.functions;
+          document.getElementById('stat-code-calls').innerText = data.parsed_summary.calls;
+          document.getElementById('stat-code-commits').innerText = data.parsed_summary.commits;
+
+          await initCodebaseGraphCanvas();
+          await loadCriticalFunctions();
+        } else {
+          alert("Scan Error: " + data.error);
+        }
+      } catch (e) {
+        alert("Scan request failed: " + e.message);
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-radar"></i> Ingest AST';
+      }
+    }
+
+    async function runFunctionBlast() {
+      const funcName = document.getElementById('func-input').value.trim();
+      if (!funcName) return;
+
+      const resBox = document.getElementById('func-blast-results');
+      resBox.innerHTML = '<div class="text-rose-400">// Traversing multi-hop CALLS relationships in FalkorDB...</div>';
+
+      try {
+        const res = await fetch('/api/codebase/blast-radius', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ function_name: funcName, max_hops: 4 })
+        });
+        const data = await res.json();
+
+        if (data.error) {
+          resBox.innerHTML = `<div class="text-rose-400">Error: ${data.error}</div>`;
+          return;
+        }
+
+        const impactedList = (data.impacted_functions || []).map(fn => `
+          <div class="p-2 rounded bg-slate-900 border border-slate-800 flex justify-between items-center">
+            <div>
+              <span class="text-purple-300 font-bold">${fn.function_name}</span>
+              <span class="text-slate-500 text-[10px]">(${fn.file}:${fn.start_line})</span>
+            </div>
+            <span class="px-2 py-0.5 rounded bg-rose-950 border border-rose-800 text-rose-300 text-[10px] font-bold">${fn.hops} hop(s)</span>
+          </div>
+        `).join('');
+
+        resBox.innerHTML = `
+          <div class="space-y-2">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+              <span class="text-slate-300 font-bold">Target Function: <span class="text-purple-400">${data.target_function}</span></span>
+              <span class="text-rose-400 font-bold">${data.total_impacted_functions} Impacted Callers</span>
+            </div>
+            <div class="text-[11px] text-slate-400">
+              <b>Affected Source Files (${data.total_affected_files}):</b> ${data.affected_files.join(', ') || 'None (leaf function)'}
+            </div>
+            <div class="space-y-1.5 max-h-56 overflow-y-auto custom-scrollbar pt-1">
+              ${impactedList || '<p class="text-slate-500 italic">No upstream callers found. This is an entry point or uncalled function.</p>'}
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        resBox.innerHTML = `<div class="text-rose-400">Request error: ${e.message}</div>`;
+      }
+    }
+
+    async function runGenerateRevertTicket() {
+      const funcName = document.getElementById('func-input').value.trim();
+      const symptom = document.getElementById('symptom-input').value.trim() || 'Regression detected';
+      if (!funcName) return;
+
+      const resBox = document.getElementById('ticket-results');
+      resBox.innerHTML = '<div class="text-emerald-400">// Connecting Function -> File -> Commit -> Engineer in FalkorDB...</div>';
+
+      try {
+        const res = await fetch('/api/codebase/revert-ticket', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ function_name: funcName, error_symptom: symptom })
+        });
+        const ticket = await res.json();
+
+        if (ticket.error) {
+          resBox.innerHTML = `<div class="text-rose-400">Error: ${ticket.error}</div>`;
+          return;
+        }
+
+        resBox.innerHTML = `
+          <div class="p-3 rounded bg-slate-900 border border-emerald-500/40 space-y-2">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+              <span class="font-bold text-emerald-400">${ticket.ticket_id}</span>
+              <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 text-[10px] font-bold">READY TO MITIGATE</span>
+            </div>
+            <div class="grid grid-cols-2 gap-2 text-[11px]">
+              <div><span class="text-slate-500">Broken Function:</span> <span class="text-purple-300">${ticket.broken_function}</span></div>
+              <div><span class="text-slate-500">Culprit Commit:</span> <span class="text-amber-300">${ticket.culprit_commit}</span></div>
+              <div><span class="text-slate-500">Author:</span> <span class="text-slate-200">${ticket.culprit_author}</span></div>
+              <div><span class="text-slate-500">Blast Radius:</span> <span class="text-rose-400 font-bold">${ticket.blast_radius_functions_count} functions</span></div>
+            </div>
+            <div class="p-2 rounded bg-slate-950 border border-slate-800 text-[11px] text-slate-300">
+              <span class="text-slate-500">Commit Message:</span> "${ticket.commit_message}"
+            </div>
+            <div class="pt-2 flex items-center justify-between">
+              <span class="text-xs text-slate-400">Recommended Action:</span>
+              <code class="px-2 py-1 rounded bg-slate-950 border border-slate-800 text-emerald-400 font-bold cursor-pointer hover:border-emerald-500"
+                    onclick="navigator.clipboard.writeText('${ticket.recommended_action}'); alert('Copied to clipboard: ${ticket.recommended_action}')">
+                ${ticket.recommended_action} 📋
+              </code>
+            </div>
+          </div>
+        `;
+      } catch (e) {
+        resBox.innerHTML = `<div class="text-rose-400">Request error: ${e.message}</div>`;
+      }
+    }
+
+    async function loadCriticalFunctions() {
+      try {
+        const res = await fetch('/api/codebase/critical');
+        const data = await res.json();
+        const container = document.getElementById('critical-funcs-table');
+
+        if (!data.critical_functions || data.critical_functions.length === 0) {
+          container.innerHTML = '<p class="text-slate-500 italic">No critical function bottlenecks computed yet.</p>';
+          return;
+        }
+
+        const rows = data.critical_functions.map((fn, idx) => `
+          <tr class="border-b border-slate-800/60 hover:bg-slate-800/40 cursor-pointer" onclick="document.getElementById('func-input').value = '${fn.name}'; runFunctionBlast(); runGenerateRevertTicket();">
+            <td class="py-2 px-3 text-slate-400">#${idx + 1}</td>
+            <td class="py-2 px-3 font-bold text-purple-300">${fn.name}</td>
+            <td class="py-2 px-3 text-slate-400 text-[11px]">${fn.file}</td>
+            <td class="py-2 px-3 text-cyan-400 font-bold text-right">${fn.in_degree} callers</td>
+            <td class="py-2 px-3 text-slate-400 text-right">${fn.out_degree}</td>
+            <td class="py-2 px-3 text-amber-400 font-bold text-right">${fn.total_calls}</td>
+          </tr>
+        `).join('');
+
+        container.innerHTML = `
+          <table class="w-full text-left">
+            <thead>
+              <tr class="text-slate-500 border-b border-slate-800 text-[11px]">
+                <th class="py-2 px-3">Rank</th>
+                <th class="py-2 px-3">Function</th>
+                <th class="py-2 px-3">File</th>
+                <th class="py-2 px-3 text-right">In-Degree (Impact)</th>
+                <th class="py-2 px-3 text-right">Out-Degree</th>
+                <th class="py-2 px-3 text-right">Total Degree</th>
+              </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+          </table>
+        `;
+      } catch (e) {
+        console.error("Failed to load critical functions:", e);
       }
     }
 
