@@ -6,11 +6,10 @@ import unittest
 from src.agent_memory import AgentMemoryEngine
 
 class TestAgentMemoryEngine(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls):
-        cls.mem = AgentMemoryEngine()
-        cls.mem.clear_memory()
-        cls.mem.init_memory_schema()
+    def setUp(self):
+        self.mem = AgentMemoryEngine()
+        self.mem.clear_memory()
+        self.mem.init_memory_schema()
 
     def test_store_and_recall_episode(self):
         # Store an episode
@@ -88,6 +87,17 @@ class TestAgentMemoryEngine(unittest.TestCase):
         self.assertEqual(steps[0]["step"], 1)
         self.assertEqual(steps[1]["agent"], "TriageAgent")
         print(f"[OK] Verified traceable audit log: {len(steps)} steps retrieved in chronological order")
+
+    def test_get_all_episodes_and_handoffs(self):
+        self.mem.store_episode("INC-TEST", "auth-service", "Test Root Cause", "ROLLBACK", True, "Test Notes")
+        self.mem.create_handoff_ticket("TriageAgent", "RemediationAgent", "INC-TEST", "auth-service", "Diag", "Act")
+
+        all_episodes = self.mem.get_all_episodes()
+        self.assertGreater(len(all_episodes), 0)
+
+        all_handoffs = self.mem.get_all_handoffs()
+        self.assertGreater(len(all_handoffs), 0)
+        print(f"[OK] test_get_all_episodes_and_handoffs: {len(all_episodes)} episode(s), {len(all_handoffs)} handoff(s)")
 
 if __name__ == "__main__":
     unittest.main()

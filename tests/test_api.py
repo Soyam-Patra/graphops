@@ -78,5 +78,20 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(data["culprit_commit"], "e8912ba")
         self.assertIn("git revert", data["recommended_action"])
 
+    @patch("src.api.AgentMemoryEngine")
+    def test_memory_endpoints(self, mock_mem_cls):
+        mock_mem = MagicMock()
+        mock_mem.get_all_episodes.return_value = [{"episode_id": "EP-01", "service_id": "auth-service"}]
+        mock_mem.get_all_handoffs.return_value = [{"ticket_id": "TICKET-01", "status": "COMPLETED"}]
+        mock_mem_cls.return_value = mock_mem
+
+        res_ep = self.client.get("/api/memory/episodes")
+        self.assertEqual(res_ep.status_code, 200)
+        self.assertEqual(res_ep.json()["total_episodes"], 1)
+
+        res_h = self.client.get("/api/memory/handoffs")
+        self.assertEqual(res_h.status_code, 200)
+        self.assertEqual(res_h.json()["total_handoffs"], 1)
+
 if __name__ == "__main__":
     unittest.main()

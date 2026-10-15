@@ -102,6 +102,20 @@ async def get_episodes(service_id: str = "auth-service"):
     episodes = mem.recall_episodes_for_service(service_id, limit=10)
     return {"service_id": service_id, "episodes": episodes}
 
+@app.get("/api/memory/episodes")
+async def get_all_memory_episodes():
+    """Returns all persisted episodes across all services from agent_memory_swarm."""
+    mem = AgentMemoryEngine()
+    episodes = mem.get_all_episodes(limit=25)
+    return {"total_episodes": len(episodes), "episodes": episodes}
+
+@app.get("/api/memory/handoffs")
+async def get_all_memory_handoffs():
+    """Returns all multi-agent handoff tickets from agent_memory_swarm."""
+    mem = AgentMemoryEngine()
+    handoffs = mem.get_all_handoffs(limit=25)
+    return {"total_handoffs": len(handoffs), "handoffs": handoffs}
+
 @app.get("/api/graph-data")
 async def get_graph_data() -> Dict[str, Any]:
     """

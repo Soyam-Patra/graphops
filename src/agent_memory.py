@@ -106,6 +106,32 @@ class AgentMemoryEngine:
             })
         return episodes
 
+    def get_all_episodes(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """
+        Retrieves all persistent incident episodes across the entire organization.
+        """
+        query = """
+        MATCH (ep:Episode)
+        RETURN ep.episode_id, ep.incident_id, ep.service_id, ep.root_cause,
+               ep.action_taken, ep.success, ep.notes, ep.created_at
+        ORDER BY ep.created_at DESC
+        LIMIT $limit
+        """
+        res = self.graph.query(query, {"limit": limit})
+        episodes = []
+        for r in res.result_set:
+            episodes.append({
+                "episode_id": r[0],
+                "incident_id": r[1],
+                "service_id": r[2],
+                "root_cause": r[3],
+                "action_taken": r[4],
+                "success": r[5],
+                "notes": r[6],
+                "created_at": r[7]
+            })
+        return episodes
+
     # ---------------------------------------------------------
     # 2. MULTI-AGENT STATE & HANDOFF (Shared Blackboard)
     # ---------------------------------------------------------
@@ -202,6 +228,35 @@ class AgentMemoryEngine:
         }
         res = self.graph.query(query, params)
         return res.result_set[0][0] > 0
+
+    def get_all_handoffs(self, limit: int = 20) -> List[Dict[str, Any]]:
+        """
+        Retrieves all past and active multi-agent handoff tickets from the graph blackboard.
+        """
+        query = """
+        MATCH (h:HandoffTicket)
+        RETURN h.ticket_id, h.from_agent, h.to_agent, h.incident_id,
+               h.service_id, h.diagnosis, h.recommended_action,
+               h.status, h.resolved_by, h.created_at
+        ORDER BY h.created_at DESC
+        LIMIT $limit
+        """
+        res = self.graph.query(query, {"limit": limit})
+        handoffs = []
+        for r in res.result_set:
+            handoffs.append({
+                "ticket_id": r[0],
+                "from_agent": r[1],
+                "to_agent": r[2],
+                "incident_id": r[3],
+                "service_id": r[4],
+                "diagnosis": r[5],
+                "recommended_action": r[6],
+                "status": r[7],
+                "resolved_by": r[8] or "Pending",
+                "created_at": r[9]
+            })
+        return handoffs
 
     # ---------------------------------------------------------
     # 3. TRACEABLE AUDIT TRAIL (Session Action Log)

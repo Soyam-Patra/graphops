@@ -101,6 +101,9 @@
       <button id="tab-btn-codebase" onclick="switchTab('codebase')" class="px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 flex items-center gap-2 transition">
         <i class="fa-solid fa-code-fork"></i> Codebase AST & Git Blame Reader
       </button>
+      <button id="tab-btn-memory" onclick="switchTab('memory')" class="px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 flex items-center gap-2 transition">
+        <i class="fa-solid fa-brain"></i> Agent Memory & Coordination (Track 2)
+      </button>
     </div>
 
     <!-- ========================================================================= -->
@@ -450,6 +453,89 @@
 
     </div>
 
+    <!-- ========================================================================= -->
+    <!-- VIEW 3: AGENT MEMORY & COORDINATION (TRACK 2 HERO FEATURE) -->
+    <!-- ========================================================================= -->
+    <div id="view-memory" class="hidden space-y-6">
+
+      <!-- Memory Header Banner -->
+      <div class="bg-gradient-to-r from-slate-900 via-indigo-950/40 to-slate-900 border border-slate-800 rounded-xl p-5 flex flex-col md:flex-row items-center justify-between gap-4 shadow-xl">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 mono">Track 2 Hero</span>
+            <h2 class="text-base font-bold">Persistent Episodic Memory & Multi-Agent Blackboard</h2>
+          </div>
+          <p class="text-xs text-slate-400">FalkorDB stores persistent incident episodes and asynchronous handoff tickets across agent sessions.</p>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <button onclick="loadMemoryDashboard()" class="px-4 py-2 rounded-lg text-xs font-semibold bg-slate-800 text-slate-300 border border-slate-700 hover:bg-slate-700 transition flex items-center gap-1.5">
+            <i class="fa-solid fa-arrows-rotate"></i> Refresh Memory
+          </button>
+        </div>
+      </div>
+
+      <!-- Memory Metrics Bar -->
+      <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Persisted Episodes</span>
+          <div id="mem-stat-episodes" class="text-2xl font-bold mt-1 text-emerald-400 mono">--</div>
+          <span class="text-[11px] text-slate-500">Cross-Session Memories</span>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Agent Handoff Tickets</span>
+          <div id="mem-stat-handoffs" class="text-2xl font-bold mt-1 text-indigo-400 mono">--</div>
+          <span class="text-[11px] text-slate-500">Triage &rarr; Remediation State</span>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Resolution Success Rate</span>
+          <div id="mem-stat-rate" class="text-2xl font-bold mt-1 text-cyan-400 mono">100%</div>
+          <span class="text-[11px] text-slate-500">Autonomous Actions</span>
+        </div>
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-4">
+          <span class="text-xs text-slate-400 mono">Memory Graph</span>
+          <div class="text-2xl font-bold mt-1 text-purple-400 mono">FalkorDB</div>
+          <span class="text-[11px] text-slate-500">agent_memory_swarm</span>
+        </div>
+      </div>
+
+      <!-- Memory Vault & Shared Blackboard Dual Column Grid -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+
+        <!-- Left: Episodic Memory Vault -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-clock-rotate-left text-emerald-400"></i>
+              <h4 class="font-bold text-sm">Incident Episodic Memory Vault</h4>
+            </div>
+            <span class="text-xs text-emerald-400 mono">:Episode Nodes</span>
+          </div>
+
+          <div id="episodes-feed" class="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
+            <p class="text-slate-500 italic mono text-xs">Loading past episodes from FalkorDB...</p>
+          </div>
+        </div>
+
+        <!-- Right: Shared Blackboard Handoffs -->
+        <div class="bg-slate-900 border border-slate-800 rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-people-arrows text-indigo-400"></i>
+              <h4 class="font-bold text-sm">Multi-Agent Coordination Blackboard</h4>
+            </div>
+            <span class="text-xs text-indigo-400 mono">:HandoffTicket Nodes</span>
+          </div>
+
+          <div id="handoffs-feed" class="space-y-3 max-h-[500px] overflow-y-auto custom-scrollbar">
+            <p class="text-slate-500 italic mono text-xs">Loading agent handoff state from FalkorDB...</p>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
   </main>
 
   <!-- Footer -->
@@ -464,30 +550,111 @@
     let rawNodesList = [];
     let rawCodeNodesList = [];
 
-    // Switch between Microservices view and Codebase view
+    // Switch between Microservices view, Codebase view, and Memory view
     function switchTab(tab) {
       const infraBtn = document.getElementById('tab-btn-infra');
       const codeBtn = document.getElementById('tab-btn-codebase');
+      const memBtn = document.getElementById('tab-btn-memory');
       const infraView = document.getElementById('view-infra');
       const codeView = document.getElementById('view-codebase');
+      const memView = document.getElementById('view-memory');
+
+      // Reset all views
+      infraView.classList.add('hidden');
+      codeView.classList.add('hidden');
+      memView.classList.add('hidden');
+
+      infraBtn.className = 'px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 flex items-center gap-2 transition';
+      codeBtn.className = 'px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 flex items-center gap-2 transition';
+      memBtn.className = 'px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 flex items-center gap-2 transition';
 
       if (tab === 'infra') {
         infraView.classList.remove('hidden');
-        codeView.classList.add('hidden');
         infraBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 flex items-center gap-2 transition';
-        codeBtn.className = 'px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 flex items-center gap-2 transition';
         if (network) network.fit();
-      } else {
-        infraView.classList.add('hidden');
+      } else if (tab === 'codebase') {
         codeView.classList.remove('hidden');
         codeBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-purple-500/10 text-purple-400 border border-purple-500/30 flex items-center gap-2 transition';
-        infraBtn.className = 'px-4 py-2 rounded-lg text-xs font-medium bg-slate-900 text-slate-400 border border-slate-800 hover:text-slate-200 flex items-center gap-2 transition';
         if (!codebaseNetwork) {
           initCodebaseGraphCanvas();
           loadCriticalFunctions();
         } else {
           codebaseNetwork.fit();
         }
+      } else if (tab === 'memory') {
+        memView.classList.remove('hidden');
+        memBtn.className = 'px-4 py-2 rounded-lg text-xs font-bold bg-indigo-500/10 text-indigo-400 border border-indigo-500/30 flex items-center gap-2 transition';
+        loadMemoryDashboard();
+      }
+    }
+
+    async function loadMemoryDashboard() {
+      try {
+        const epRes = await fetch('/api/memory/episodes');
+        const epData = await epRes.json();
+        const hRes = await fetch('/api/memory/handoffs');
+        const hData = await hRes.json();
+
+        document.getElementById('mem-stat-episodes').innerText = epData.total_episodes || 0;
+        document.getElementById('mem-stat-handoffs').innerText = hData.total_handoffs || 0;
+
+        // Render Episodes
+        const epFeed = document.getElementById('episodes-feed');
+        if (!epData.episodes || epData.episodes.length === 0) {
+          epFeed.innerHTML = '<p class="text-slate-500 italic mono text-xs">No episodes recorded yet. Run the Autonomous Swarm to generate episodic memories.</p>';
+        } else {
+          epFeed.innerHTML = epData.episodes.map(ep => `
+            <div class="p-3.5 rounded-lg bg-slate-950 border border-emerald-500/30 space-y-2 mono text-xs">
+              <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                <span class="text-emerald-400 font-bold">${ep.episode_id}</span>
+                <span class="px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 text-[10px] font-bold">SUCCESS</span>
+              </div>
+              <div class="grid grid-cols-2 gap-2 text-[11px]">
+                <div><span class="text-slate-500">Service:</span> <span class="text-cyan-300 font-semibold">${ep.service_id}</span></div>
+                <div><span class="text-slate-500">Incident:</span> <span class="text-rose-400">${ep.incident_id}</span></div>
+              </div>
+              <div class="p-2 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
+                <span class="text-slate-500">Root Cause:</span> "${ep.root_cause}"
+              </div>
+              <div class="text-[11px] text-slate-300">
+                <span class="text-slate-500">Action:</span> <code class="px-1.5 py-0.5 rounded bg-slate-900 text-purple-300">${ep.action_taken}</code>
+              </div>
+              <div class="text-[10px] text-slate-500 pt-1 border-t border-slate-800/60">
+                ${ep.notes} • ${ep.created_at ? new Date(ep.created_at).toLocaleTimeString() : 'N/A'}
+              </div>
+            </div>
+          `).join('');
+        }
+
+        // Render Handoffs
+        const hFeed = document.getElementById('handoffs-feed');
+        if (!hData.handoffs || hData.handoffs.length === 0) {
+          hFeed.innerHTML = '<p class="text-slate-500 italic mono text-xs">No handoffs recorded yet. Run the Autonomous Swarm to observe agent collaboration.</p>';
+        } else {
+          hFeed.innerHTML = hData.handoffs.map(h => `
+            <div class="p-3.5 rounded-lg bg-slate-950 border border-indigo-500/30 space-y-2 mono text-xs">
+              <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+                <span class="text-indigo-400 font-bold">${h.ticket_id}</span>
+                <span class="px-2 py-0.5 rounded ${h.status === 'COMPLETED' ? 'bg-emerald-950 text-emerald-300' : 'bg-amber-950 text-amber-300'} text-[10px] font-bold">${h.status}</span>
+              </div>
+              <div class="flex items-center gap-2 text-[11px]">
+                <span class="text-cyan-400 font-bold">${h.from_agent}</span>
+                <i class="fa-solid fa-arrow-right text-slate-600"></i>
+                <span class="text-purple-400 font-bold">${h.to_agent}</span>
+                <span class="text-slate-500 ml-auto text-[10px]">Resolved by: ${h.resolved_by}</span>
+              </div>
+              <div class="p-2 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300">
+                <span class="text-slate-500">Diagnosis:</span> "${h.diagnosis}"
+              </div>
+              <div class="text-[11px] text-slate-300">
+                <span class="text-slate-500">Recommended:</span> <code class="px-1.5 py-0.5 rounded bg-slate-900 text-amber-300">${h.recommended_action}</code>
+              </div>
+            </div>
+          `).join('');
+        }
+
+      } catch (e) {
+        console.error("Failed to load memory dashboard:", e);
       }
     }
 
