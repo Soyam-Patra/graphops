@@ -65,15 +65,14 @@ class CodebaseTools:
         who last touched the file containing this function.
         """
         query = """
-        MATCH (f:Function)
+        MATCH (f:Function)<-[:DEFINES]-(file:File)<-[:MODIFIED]-(cm:Commit)-[:AUTHORED_BY]->(eng:Engineer)
         WHERE f.name = $func_name OR f.id = $func_name
-        MATCH (file:File {path: f.file})<-[:MODIFIED]-(cm:Commit)-[:AUTHORED_BY]->(eng:Engineer)
         RETURN cm.sha AS sha,
                cm.message AS message,
                cm.date AS date,
                eng.name AS author,
                eng.email AS email,
-               f.file AS file_path
+               file.path AS file_path
         ORDER BY cm.date DESC
         LIMIT 1
         """

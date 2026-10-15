@@ -4,10 +4,12 @@ Test suite verifying FalkorDB GraphTools layer.
 
 import unittest
 from src.graph_tools import GraphTools
+from scripts.seed_company_brain import seed_company_brain
 
 class TestGraphTools(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        seed_company_brain(scenario="bad_deployment")
         cls.tools = GraphTools()
 
     def test_get_active_incidents(self):
