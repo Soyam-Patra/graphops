@@ -93,5 +93,22 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(res_h.status_code, 200)
         self.assertEqual(res_h.json()["total_handoffs"], 1)
 
+    @patch("src.api.GitHubWatcher")
+    def test_github_webhook_and_simulate(self, mock_watcher_cls):
+        mock_watcher = MagicMock()
+        mock_watcher.handle_push_event.return_value = {"status": "INGESTED", "commits_ingested": 1}
+        mock_watcher.handle_ci_failure_event.return_value = {"status": "ANALYZED", "github_pr_comment": "PR review comment"}
+        mock_watcher_cls.return_value = mock_watcher
+
+        # Test webhook push
+        res_push = self.client.post("/api/github/webhook", json={"commits": []}, headers={"X-GitHub-Event": "push"})
+        self.assertEqual(res_push.status_code, 200)
+        self.assertEqual(res_push.json()["status"], "INGESTED")
+
+        # Test simulator
+        res_sim = self.client.post("/api/github/simulate", json={"event_type": "ci_failure", "failing_function": "foo"})
+        self.assertEqual(res_sim.status_code, 200)
+        self.assertEqual(res_sim.json()["status"], "ANALYZED")
+
 if __name__ == "__main__":
     unittest.main()

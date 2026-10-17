@@ -6,7 +6,7 @@ and inspect real-time agent audit logs.
 
 import os
 from typing import Dict, Any
-from fastapi import FastAPI, BackgroundTasks
+from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -19,6 +19,7 @@ from scripts.seed_company_brain import seed_company_brain
 from src.code_parser import CodebaseParser
 from src.code_graph_seeder import CodebaseGraphSeeder
 from src.code_tools import CodebaseTools
+from src.github_watcher import GitHubWatcher
 
 app = FastAPI(title="GraphOps: Autonomous Multi-Agent SRE Swarm", version="1.0.0")
 
@@ -459,6 +460,67 @@ async def get_critical_functions() -> Dict[str, Any]:
         return {"critical_functions": funcs}
     except Exception as e:
         return {"error": str(e)}
+
+# =========================================================================
+# GitHub Real-Time Webhook & CI/CD Watcher Endpoints
+# =========================================================================
+
+class GitHubSimulateRequest(BaseModel):
+    event_type: str = "ci_failure" # 'push' or 'ci_failure'
+    failing_function: str = "calculate_function_blast_radius"
+    failing_file: str = "src/code_tools.py"
+    error_message: str = "AttributeError: 'NoneType' object has no attribute 'result_set'"
+    author: str = "Soyam"
+    commit_sha: str = "86e6fd7"
+
+@app.post("/api/github/webhook")
+async def receive_github_webhook(request: Request) -> Dict[str, Any]:
+    """
+    Receives and processes live GitHub Webhook events (push, pull_request, workflow_run).
+    Incrementally updates FalkorDB and calculates blast radius on breaking changes.
+    """
+    try:
+        event = request.headers.get("X-GitHub-Event", "push")
+        payload = await request.json()
+        watcher = GitHubWatcher()
+
+        if event == "push":
+            return watcher.handle_push_event(payload)
+        elif event in ["workflow_run", "check_run", "ci_failure"]:
+            return watcher.handle_ci_failure_event(payload)
+        else:
+            return {"status": "IGNORED", "event": event, "message": f"Event '{event}' acknowledged."}
+    except Exception as e:
+        return {"status": "ERROR", "error": str(e)}
+
+@app.post("/api/github/simulate")
+async def simulate_github_event(req: GitHubSimulateRequest) -> Dict[str, Any]:
+    """
+    Simulates a live developer commit or CI/CD test failure directly from the web UI.
+    """
+    watcher = GitHubWatcher()
+    if req.event_type == "push":
+        simulated_payload = {
+            "repository": {"name": "graphops"},
+            "sender": {"login": req.author.lower()},
+            "commits": [{
+                "id": f"{req.commit_sha}9999",
+                "message": f"feat: update {req.failing_function} logic in {req.failing_file}",
+                "author": {"name": req.author, "email": f"{req.author.lower()}@graphops.dev"},
+                "modified": [req.failing_file],
+                "added": []
+            }]
+        }
+        return watcher.handle_push_event(simulated_payload)
+    else:
+        simulated_payload = {
+            "failing_function": req.failing_function,
+            "failing_file": req.failing_file,
+            "error_message": req.error_message,
+            "commit_sha": req.commit_sha,
+            "pr_number": 42
+        }
+        return watcher.handle_ci_failure_event(simulated_payload)
 
 if __name__ == "__main__":
     import uvicorn
