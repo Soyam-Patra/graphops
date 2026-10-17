@@ -396,10 +396,11 @@ async def get_codebase_graph_data() -> Dict[str, Any]:
             if label == "Commit" and "sha" in props:
                 display_name = f"git {props['sha'][:7]}"
 
-            tooltip_lines = [f"<b>Type:</b> {label}"]
+            tooltip_lines = [f"Type: {label}"]
             for k, v in props.items():
-                tooltip_lines.append(f"<b>{k}:</b> {v}")
-            tooltip = "<br>".join(tooltip_lines)
+                if k not in ["docstring"]:
+                    tooltip_lines.append(f"{k}: {v}")
+            tooltip = "\n".join(tooltip_lines)
 
             nodes.append({
                 "id": nid,
