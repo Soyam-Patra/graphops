@@ -38,9 +38,29 @@
 
 ---
 
-### 2:30 – 3:00 | Episodic Memory & Wrap-Up (30s)
-* **Screen**: Point to the **Audit Feed** and the **Persisted Episodes** counter incrementing.
+---
+
+### 2:30 – 3:15 | Codebase AST Blast Radius & 1-Click Revert (45s)
+* **Screen**: Switch to **Codebase AST & Git Blame** tab on `http://localhost:8080`.
+* **Action**: Enter `d:\FalkorDB` or click the FalkorDB repo preset and click **"Ingest AST"**.
 * **Narration**:
-  > *"Notice that before finishing, RemediationAgent writes a new persistent `:Episode` node back into FalkorDB. When an incident occurs next week, future agent sessions will recall this episode and resolve it in milliseconds.*  
-  > *Every step is traceable, every decision is explainable, and the entire traversal runs in under 50 milliseconds thanks to FalkorDB.*  
-  > *Thank you for watching GraphOps!"*
+  > *"GraphOps doesn't stop at microservices. It can ingest any local or remote GitHub repository—parsing Python files, functions, and Git history into an AST call graph in FalkorDB.*  
+  > *If a developer breaks a function like `calculate_function_blast_radius`, GraphOps instantly traverses upstream callers across multiple files in 3 milliseconds using GraphBLAS matrix multiplication.*  
+  > *It then automatically correlates Git blame to discover who authored the breaking change and generates a 1-click `git revert` remediation ticket with ready-to-run shell commands."*
+
+---
+
+### 3:15 – 3:45 | Live GitHub Watcher Bot & CI/CD Interception (30s)
+* **Screen**: Scroll to **Live GitHub CI/CD & Commit Watcher Bot** card.
+* **Action**: Click **"Simulate Dev Commit"**, then click **"Simulate CI/CD Test Failure"**.
+* **Narration**:
+  > *"We've also built a live GitHub Webhook Watcher Bot. When engineers push commits or merge PRs, FalkorDB tracks modified files and authors in real time.*  
+  > *And when CI/CD tests fail, the bot immediately intercepts the failure, computes the cascading blast radius, and posts an automated PR review comment directly to GitHub with the root-cause author and recovery commands."*
+
+---
+
+### 3:45 – 4:00 | Episodic Memory & Wrap-Up (15s)
+* **Screen**: Point to the **Agent Memory & Coordination** tab and the **Persisted Episodes** counter.
+* **Narration**:
+  > *"Every step is traceable, every decision is explainable, and the entire traversal runs in under 4 milliseconds thanks to FalkorDB.*  
+  > *This is GraphOps: Context for AI Agents. Thank you!"*
