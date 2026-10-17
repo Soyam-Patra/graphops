@@ -201,5 +201,24 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(data["monitored_repo"]["name"], "graphops")
         self.assertEqual(data["monitored_repo"]["functions_count"], 1)
 
+    @patch("src.api.CodebaseTools")
+    @patch("src.api.AgentMemoryEngine")
+    def test_execute_revert_endpoint(self, mock_mem_cls, mock_tools_cls):
+        mock_tools = MagicMock()
+        mock_tools_cls.return_value = mock_tools
+        mock_mem = MagicMock()
+        mock_mem_cls.return_value = mock_mem
+
+        res = self.client.post("/api/codebase/execute-revert", json={
+            "commit_sha": "86e6fd7",
+            "function_name": "calculate_function_blast_radius",
+            "ticket_id": "TICKET-123"
+        })
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "SUCCESS")
+        self.assertEqual(data["commit_reverted"], "86e6fd7")
+        self.assertTrue(data["falkordb_mutated"])
+
 if __name__ == "__main__":
     unittest.main()

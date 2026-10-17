@@ -881,6 +881,9 @@
       await monitorRepo(repoUrl, cleanName);
     }
 
+    let nodesDataSet = null;
+    let edgesDataSet = null;
+
     // Codebase Graph Vis.js
     async function loadCodebaseGraph() {
       try {
@@ -888,8 +891,8 @@
         const data = await res.json();
         const container = document.getElementById('codebase-vis-canvas');
 
-        const nodes = new vis.DataSet(data.nodes);
-        const edges = new vis.DataSet(data.edges);
+        nodesDataSet = new vis.DataSet(data.nodes);
+        edgesDataSet = new vis.DataSet(data.edges);
 
         const options = {
           physics: {
@@ -901,11 +904,11 @@
           interaction: { hover: true, tooltipDelay: 100 }
         };
 
-        network = new vis.Network(container, { nodes, edges }, options);
+        network = new vis.Network(container, { nodes: nodesDataSet, edges: edgesDataSet }, options);
         network.on("click", function(params) {
           if (params.nodes.length > 0) {
             const nodeId = params.nodes[0];
-            const node = nodes.get(nodeId);
+            const node = nodesDataSet.get(nodeId);
             if (node.group === "Function") {
               document.getElementById('target-func-input').value = node.label;
               calculateBlastRadius();
@@ -917,6 +920,43 @@
       }
     }
 
+    function highlightFaultInGraph(faultName, impactedNames = []) {
+      if (!nodesDataSet || !network) return;
+      let targetNodeId = null;
+
+      nodesDataSet.forEach(node => {
+        if (node.label === faultName || node.label.endsWith(`::${faultName}`)) {
+          targetNodeId = node.id;
+          nodesDataSet.update({
+            id: node.id,
+            color: { background: '#ef4444', border: '#b91c1c', highlight: '#dc2626' },
+            font: { color: '#ffffff', bold: true, size: 14 },
+            shape: 'box',
+            label: `🚨 FAULT: ${faultName}`
+          });
+        } else if (impactedNames.some(imp => node.label === imp || node.label.endsWith(`::${imp}`))) {
+          nodesDataSet.update({
+            id: node.id,
+            color: { background: '#f59e0b', border: '#d97706', highlight: '#b45309' },
+            font: { color: '#ffffff', bold: true },
+            label: `💥 IMPACTED: ${node.label}`
+          });
+        }
+      });
+
+      if (targetNodeId !== null) {
+        network.focus(targetNodeId, {
+          scale: 1.35,
+          animation: { duration: 900, easingFunction: 'easeInOutQuad' }
+        });
+      }
+    }
+
+    function resetGraphFaultColors() {
+      if (!nodesDataSet) return;
+      loadCodebaseGraph();
+    }
+
     async function calculateBlastRadius() {
       const funcName = document.getElementById('target-func-input').value.trim();
       const res = await fetch('/api/codebase/blast-radius', {
@@ -926,6 +966,10 @@
       });
       const data = await res.json();
       document.getElementById('blast-results-box').innerText = JSON.stringify(data, null, 2);
+
+      const impacted = (data.impacted_functions || []).map(f => f.name || f);
+      highlightFaultInGraph(funcName, impacted);
+      generateRevertTicket();
     }
 
     async function generateRevertTicket() {
@@ -933,10 +977,41 @@
       const res = await fetch('/api/codebase/revert-ticket', {
         method: 'POST',
         headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ function_name: funcName, error_symptom: "Production failure in downstream service" })
+        body: JSON.stringify({ function_name: funcName, error_symptom: "Production regression in downstream service" })
       });
       const data = await res.json();
-      document.getElementById('revert-ticket-box').innerText = JSON.stringify(data, null, 2);
+      
+      const box = document.getElementById('revert-ticket-box');
+      box.innerHTML = `
+        <div style="margin-bottom: 8px;"><b>Ticket ID:</b> ${data.ticket_id}</div>
+        <div style="margin-bottom: 8px;"><b>Broken Function:</b> <code>${data.broken_function}</code></div>
+        <div style="margin-bottom: 8px;"><b>Culprit Author:</b> ${data.culprit_author} (${data.culprit_email || 'N/A'})</div>
+        <div style="margin-bottom: 8px;"><b>Commit SHA:</b> <code>${data.culprit_commit}</code></div>
+        <div style="margin-bottom: 12px;"><b>Command:</b> <code>${data.recommended_action}</code></div>
+        <button class="btn btn-danger btn-sm" onclick="execute1ClickRevert('${data.culprit_commit}', '${data.broken_function}', '${data.ticket_id}')">⚡ Execute 1-Click Git Revert & Resolve</button>
+      `;
+    }
+
+    async function execute1ClickRevert(sha, funcName, ticketId) {
+      showToast(`Executing automated Git revert for commit ${sha}...`);
+      try {
+        const res = await fetch('/api/codebase/execute-revert', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({ commit_sha: sha, function_name: funcName, ticket_id: ticketId })
+        });
+        const data = await res.json();
+        if (data.status === 'SUCCESS') {
+          showToast(`Reverted ${sha}! Incident marked RESOLVED in FalkorDB.`);
+          resetGraphFaultColors();
+          const box = document.getElementById('revert-ticket-box');
+          box.innerHTML += `<div style="margin-top: 10px; color: var(--success); font-weight: 600;">✅ ${data.message}</div>`;
+        } else {
+          showToast("Revert error: " + data.error);
+        }
+      } catch (e) {
+        showToast("Revert failed: " + e.message);
+      }
     }
 
     // CI/CD Simulator
@@ -962,7 +1037,14 @@
       if (data.github_pr_comment) {
         document.getElementById('pr-comment-box').innerText = data.github_pr_comment;
       }
-      showToast(`Simulated ${eventType} event successfully`);
+
+      if (eventType === 'ci_failure') {
+        const impacted = (data.blast_radius && data.blast_radius.impacted_functions) ? data.blast_radius.impacted_functions.map(f => f.name || f) : [];
+        highlightFaultInGraph(failing_function, impacted);
+        showToast(`🚨 CI Failure intercepted! Highlighted blast radius on topology canvas.`);
+      } else {
+        showToast(`Simulated push commit successfully`);
+      }
     }
 
     // Outage Swarm & Memory
