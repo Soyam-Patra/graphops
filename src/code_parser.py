@@ -25,18 +25,28 @@ class CodebaseParser:
             self.repo_url = raw_path
             clean_url = raw_path.rstrip("/").removesuffix(".git")
             repo_name = clean_url.split("/")[-1]
+
+            # Fast path: If monitoring graphops itself, use local workspace directly
+            if repo_name.lower() in ["graphops", "falkordb"] and os.path.exists("src"):
+                self.repo_path = os.path.abspath(".")
+                self.display_name = "graphops"
+                return
+
             base_cache = os.path.join(os.path.abspath("."), ".repo_cache")
             os.makedirs(base_cache, exist_ok=True)
             target_dir = os.path.join(base_cache, repo_name)
 
+            git_env = os.environ.copy()
+            git_env["GIT_TERMINAL_PROMPT"] = "0"
+
             if not os.path.exists(target_dir):
                 cmd = ["git", "clone", "--depth", "25", raw_path, target_dir]
-                res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+                res = subprocess.run(cmd, capture_output=True, text=True, timeout=45, env=git_env)
                 if res.returncode != 0:
                     raise RuntimeError(f"Failed to clone repository: {res.stderr.strip() or res.stdout.strip()}")
             else:
                 try:
-                    subprocess.run(["git", "pull"], cwd=target_dir, capture_output=True, timeout=15)
+                    subprocess.run(["git", "pull"], cwd=target_dir, capture_output=True, timeout=10, env=git_env)
                 except Exception:
                     pass
 

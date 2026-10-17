@@ -747,13 +747,18 @@
     }
 
     function switchTab(tabId) {
-      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-btn').forEach(b => {
+        b.classList.remove('active');
+        if (b.getAttribute('onclick') && b.getAttribute('onclick').includes(tabId)) {
+          b.classList.add('active');
+        }
+      });
       document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
-      document.getElementById(tabId).style.display = 'block';
-      event.currentTarget.classList.add('active');
+      const target = document.getElementById(tabId);
+      if (target) target.style.display = 'block';
 
-      if (tabId === 'tab-codebase' && !network) {
-        setTimeout(loadCodebaseGraph, 100);
+      if (tabId === 'tab-codebase') {
+        setTimeout(loadCodebaseGraph, 80);
       }
     }
 
@@ -765,7 +770,6 @@
         if (data.authenticated && data.user) {
           renderUser(data.user, data.repos, data.monitored_repo);
         } else {
-          // Auto connect default demo user
           quickDemoConnect();
         }
       } catch (e) {
@@ -789,10 +793,10 @@
           renderUser(data.user, data.repos, null);
           showToast(`Connected as @${data.user.login}!`);
         } else {
-          alert("GitHub Error: " + data.message);
+          showToast("GitHub Error: " + data.message);
         }
       } catch (e) {
-        alert("Failed to connect: " + e);
+        showToast("Failed to connect: " + e.message);
       }
     }
 
@@ -859,12 +863,11 @@
           showToast(`Ingested ${repoName}! Files: ${data.monitored_repo.files_count}, Funcs: ${data.monitored_repo.functions_count}`);
           document.getElementById('monitored-tag').innerText = `Active: ${repoName}`;
           switchTab('tab-codebase');
-          loadCodebaseGraph();
         } else {
-          alert("Error: " + data.message);
+          showToast("Error: " + data.message);
         }
       } catch (e) {
-        alert("Ingest failed: " + e);
+        showToast("Ingest failed: " + e.message);
       }
     }
 
