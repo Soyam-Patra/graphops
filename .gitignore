@@ -21,3 +21,4 @@ data/
 
 # Cloned repository cache for Codebase Reader
 .repo_cache/
+sandbox_repo/

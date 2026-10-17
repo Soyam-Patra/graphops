@@ -21,6 +21,7 @@ from src.code_parser import CodebaseParser
 from src.code_graph_seeder import CodebaseGraphSeeder
 from src.code_tools import CodebaseTools
 from src.github_watcher import GitHubWatcher
+from src.sandbox_engine import SandboxEngine
 
 app = FastAPI(title="GraphOps: Autonomous Multi-Agent SRE Swarm", version="1.0.0")
 
@@ -726,6 +727,55 @@ async def monitor_selected_repo(req: GitHubMonitorRepoRequest) -> Dict[str, Any]
             "status": "SUCCESS",
             "monitored_repo": monitored_info
         }
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+# =========================================================================
+# Verifiable Sandbox Closed-Loop Recovery Endpoints
+# =========================================================================
+
+@app.get("/api/sandbox/status")
+async def get_sandbox_status() -> Dict[str, Any]:
+    """Returns current sandbox status, test state, and last commit."""
+    try:
+        se = SandboxEngine()
+        return se.get_state()
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+@app.post("/api/sandbox/init")
+async def initialize_sandbox() -> Dict[str, Any]:
+    """Resets/initializes sandbox to a clean baseline commit with passing tests."""
+    try:
+        se = SandboxEngine()
+        return se.init_sandbox(force=True)
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+@app.post("/api/sandbox/inject")
+async def inject_sandbox_regression() -> Dict[str, Any]:
+    """Injects a real regression, commits to Git, and verifies test failure."""
+    try:
+        se = SandboxEngine()
+        return se.inject_regression()
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+@app.post("/api/sandbox/diagnose")
+async def diagnose_sandbox_regression() -> Dict[str, Any]:
+    """Traverses FalkorDB GraphBLAS blast radius and attributes commit."""
+    try:
+        se = SandboxEngine()
+        return se.diagnose_regression()
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+@app.post("/api/sandbox/revert-and-verify")
+async def revert_and_verify_sandbox() -> Dict[str, Any]:
+    """Genuinely executes git revert in sandbox, re-runs tests live, and verifies exit code 0."""
+    try:
+        se = SandboxEngine()
+        return se.execute_revert_and_verify()
     except Exception as e:
         return {"status": "ERROR", "message": str(e)}
 
