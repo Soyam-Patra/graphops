@@ -12,12 +12,10 @@ def check_account_balance(user_id: str) -> float:
     return 1000.0
 
 def charge_card(card_token: str, amount: float) -> dict:
-    """Charges the payment card. REGRESSION INJECTED: multiplier is None."""
+    """Charges the payment card. Critical leaf function."""
     if not validate_token(card_token):
         raise ValueError("Invalid payment token")
-    # BUG INJECTED: fee_multiplier is uninitialized None
-    fee_multiplier = None
-    fee = amount * fee_multiplier  # TypeError: unsupported operand type(s) for *: 'float' and 'NoneType'
+    fee = amount * 0.02
     total = amount + fee
     return {"status": "CHARGED", "amount": total, "fee": fee}
 
