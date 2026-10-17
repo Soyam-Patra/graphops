@@ -5,7 +5,8 @@ and inspect real-time agent audit logs.
 """
 
 import os
-from typing import Dict, Any
+import requests
+from typing import Dict, Any, Optional, List
 from fastapi import FastAPI, BackgroundTasks, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, FileResponse
@@ -38,11 +39,20 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
 
 @app.get("/", response_class=HTMLResponse)
 async def serve_dashboard():
-    """Serves the main GraphOps interactive dashboard."""
+    """Serves the main GraphOps dark studio interactive dashboard."""
     index_file = os.path.join(STATIC_DIR, "index.html")
     if os.path.exists(index_file):
         return FileResponse(index_file)
     return "<h1>GraphOps Dashboard Initializing...</h1>"
+
+@app.get("/minimal", response_class=HTMLResponse)
+@app.get("/light", response_class=HTMLResponse)
+async def serve_minimal_dashboard():
+    """Serves the clean minimal white theme GraphOps dashboard."""
+    index_file = os.path.join(STATIC_DIR, "minimal_white.html")
+    if os.path.exists(index_file):
+        return FileResponse(index_file)
+    return "<h1>Minimal White Dashboard Initializing...</h1>"
 
 @app.get("/api/status")
 async def get_system_status() -> Dict[str, Any]:
@@ -521,6 +531,143 @@ async def simulate_github_event(req: GitHubSimulateRequest) -> Dict[str, Any]:
             "pr_number": 42
         }
         return watcher.handle_ci_failure_event(simulated_payload)
+
+# =========================================================================
+# GitHub Account Authentication & Multi-Repo Monitoring Endpoints
+# =========================================================================
+
+class GitHubConnectRequest(BaseModel):
+    username: Optional[str] = "Soyam-Patra"
+    token: Optional[str] = None
+
+class GitHubMonitorRepoRequest(BaseModel):
+    repo_url: str
+    repo_name: Optional[str] = None
+
+ACTIVE_GITHUB_SESSION: Dict[str, Any] = {
+    "authenticated": False,
+    "user": None,
+    "repos": [],
+    "monitored_repo": None
+}
+
+@app.post("/api/github/connect")
+async def connect_github_account(req: GitHubConnectRequest) -> Dict[str, Any]:
+    """
+    Connects a user's GitHub account via Personal Access Token (PAT) or Public Username.
+    Fetches user profile and their active repositories for 1-click monitoring.
+    """
+    global ACTIVE_GITHUB_SESSION
+    headers = {"User-Agent": "GraphOps-Autonomous-Engine/1.0"}
+    
+    has_token = bool(req.token and req.token.strip())
+    if has_token:
+        headers["Authorization"] = f"Bearer {req.token.strip()}"
+        user_url = "https://api.github.com/user"
+        repos_url = "https://api.github.com/user/repos?sort=updated&per_page=50"
+    else:
+        uname = req.username.strip() if req.username and req.username.strip() else "Soyam-Patra"
+        user_url = f"https://api.github.com/users/{uname}"
+        repos_url = f"https://api.github.com/users/{uname}/repos?sort=updated&per_page=50"
+
+    try:
+        user_resp = requests.get(user_url, headers=headers, timeout=12)
+        if user_resp.status_code != 200:
+            err_msg = user_resp.json().get("message", "User not found") if user_resp.status_code in [401, 403, 404] else f"HTTP {user_resp.status_code}"
+            return {"status": "ERROR", "message": f"GitHub API error: {err_msg}"}
+        
+        user_data = user_resp.json()
+        repos_resp = requests.get(repos_url, headers=headers, timeout=12)
+        raw_repos = repos_resp.json() if repos_resp.status_code == 200 and isinstance(repos_resp.json(), list) else []
+
+        cleaned_repos = []
+        for r in raw_repos:
+            if isinstance(r, dict):
+                cleaned_repos.append({
+                    "id": r.get("id"),
+                    "name": r.get("name"),
+                    "full_name": r.get("full_name"),
+                    "html_url": r.get("html_url"),
+                    "clone_url": r.get("clone_url"),
+                    "description": r.get("description") or "No description provided.",
+                    "language": r.get("language") or "Other",
+                    "stars": r.get("stargazers_count", 0),
+                    "forks": r.get("forks_count", 0),
+                    "updated_at": r.get("updated_at"),
+                    "default_branch": r.get("default_branch", "main")
+                })
+
+        user_profile = {
+            "login": user_data.get("login"),
+            "name": user_data.get("name") or user_data.get("login"),
+            "avatar_url": user_data.get("avatar_url"),
+            "html_url": user_data.get("html_url"),
+            "public_repos": user_data.get("public_repos", len(cleaned_repos)),
+            "bio": user_data.get("bio") or "GitHub Developer",
+            "is_token_auth": has_token
+        }
+
+        ACTIVE_GITHUB_SESSION["authenticated"] = True
+        ACTIVE_GITHUB_SESSION["user"] = user_profile
+        ACTIVE_GITHUB_SESSION["repos"] = cleaned_repos
+
+        return {
+            "status": "SUCCESS",
+            "authenticated": True,
+            "user": user_profile,
+            "repos": cleaned_repos
+        }
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+@app.get("/api/github/session")
+async def get_github_session() -> Dict[str, Any]:
+    """Returns the current linked GitHub user and monitored repository state."""
+    return ACTIVE_GITHUB_SESSION
+
+@app.post("/api/github/disconnect")
+async def disconnect_github_account() -> Dict[str, Any]:
+    """Disconnects the active GitHub account session."""
+    global ACTIVE_GITHUB_SESSION
+    ACTIVE_GITHUB_SESSION = {
+        "authenticated": False,
+        "user": None,
+        "repos": [],
+        "monitored_repo": None
+    }
+    return {"status": "DISCONNECTED", "authenticated": False}
+
+@app.post("/api/github/monitor-repo")
+async def monitor_selected_repo(req: GitHubMonitorRepoRequest) -> Dict[str, Any]:
+    """
+    Ingests and begins continuous monitoring of a user's GitHub repository.
+    Clones, parses AST call-graph, and seeds FalkorDB codebase_graph.
+    """
+    global ACTIVE_GITHUB_SESSION
+    try:
+        parser = CodebaseParser(req.repo_url)
+        data = parser.parse_repository()
+        seeder = CodebaseGraphSeeder()
+        stats = seeder.ingest_codebase(data)
+
+        monitored_info = {
+            "name": req.repo_name or data["repository"],
+            "url": req.repo_url,
+            "local_path": data["repo_path"],
+            "metrics": stats,
+            "files_count": len(data["files"]),
+            "functions_count": len(data["functions"]),
+            "calls_count": len(data["calls"]),
+            "commits_count": len(data["commits"])
+        }
+        ACTIVE_GITHUB_SESSION["monitored_repo"] = monitored_info
+
+        return {
+            "status": "SUCCESS",
+            "monitored_repo": monitored_info
+        }
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
 
 if __name__ == "__main__":
     import uvicorn

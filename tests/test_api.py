@@ -110,5 +110,96 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(res_sim.status_code, 200)
         self.assertEqual(res_sim.json()["status"], "ANALYZED")
 
+    def test_serve_minimal_dashboard(self):
+        res = self.client.get("/minimal")
+        self.assertEqual(res.status_code, 200)
+        res_light = self.client.get("/light")
+        self.assertEqual(res_light.status_code, 200)
+
+    @patch("src.api.requests.get")
+    def test_github_auth_and_session(self, mock_get):
+        # Mock user profile response
+        mock_user_resp = MagicMock()
+        mock_user_resp.status_code = 200
+        mock_user_resp.json.return_value = {
+            "login": "Soyam-Patra",
+            "name": "Soyam Patra",
+            "avatar_url": "https://avatars.githubusercontent.com/u/123",
+            "html_url": "https://github.com/Soyam-Patra",
+            "public_repos": 12,
+            "bio": "Building autonomous systems"
+        }
+
+        # Mock user repos response
+        mock_repos_resp = MagicMock()
+        mock_repos_resp.status_code = 200
+        mock_repos_resp.json.return_value = [
+            {
+                "id": 999,
+                "name": "graphops",
+                "full_name": "Soyam-Patra/graphops",
+                "html_url": "https://github.com/Soyam-Patra/graphops",
+                "clone_url": "https://github.com/Soyam-Patra/graphops.git",
+                "description": "GraphOps Autonomous SRE Swarm",
+                "language": "Python",
+                "stargazers_count": 5,
+                "forks_count": 1,
+                "updated_at": "2026-10-17T12:00:00Z",
+                "default_branch": "main"
+            }
+        ]
+
+        mock_get.side_effect = [mock_user_resp, mock_repos_resp]
+
+        # 1. Connect
+        connect_res = self.client.post("/api/github/connect", json={"username": "Soyam-Patra"})
+        self.assertEqual(connect_res.status_code, 200)
+        data = connect_res.json()
+        self.assertEqual(data["status"], "SUCCESS")
+        self.assertEqual(data["user"]["login"], "Soyam-Patra")
+        self.assertEqual(len(data["repos"]), 1)
+
+        # 2. Check Session
+        session_res = self.client.get("/api/github/session")
+        self.assertEqual(session_res.status_code, 200)
+        self.assertTrue(session_res.json()["authenticated"])
+        self.assertEqual(session_res.json()["user"]["login"], "Soyam-Patra")
+
+        # 3. Disconnect
+        disc_res = self.client.post("/api/github/disconnect")
+        self.assertEqual(disc_res.status_code, 200)
+        self.assertFalse(disc_res.json()["authenticated"])
+
+    @patch("src.api.CodebaseParser")
+    @patch("src.api.CodebaseGraphSeeder")
+    def test_github_monitor_repo_endpoint(self, mock_seeder_cls, mock_parser_cls):
+        mock_parser = MagicMock()
+        mock_parser.parse_repository.return_value = {
+            "repository": "graphops",
+            "repo_path": "/tmp/graphops",
+            "files": [{"path": "src/api.py"}],
+            "functions": [{"id": "func1", "name": "serve_dashboard"}],
+            "calls": [],
+            "commits": []
+        }
+        mock_parser_cls.return_value = mock_parser
+
+        mock_seeder = MagicMock()
+        mock_seeder.ingest_codebase.return_value = {
+            "total_nodes": 10,
+            "total_relationships": 12
+        }
+        mock_seeder_cls.return_value = mock_seeder
+
+        res = self.client.post("/api/github/monitor-repo", json={
+            "repo_url": "https://github.com/Soyam-Patra/graphops",
+            "repo_name": "graphops"
+        })
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "SUCCESS")
+        self.assertEqual(data["monitored_repo"]["name"], "graphops")
+        self.assertEqual(data["monitored_repo"]["functions_count"], 1)
+
 if __name__ == "__main__":
     unittest.main()
