@@ -99,6 +99,33 @@ class GitHubWatcher:
         blast = self.tools.calculate_function_blast_radius(failing_func)
         ticket = self.tools.generate_revert_ticket(failing_func, error_msg)
 
+        # Persist incident to FalkorDB codebase_graph
+        inc_id = f"INC-CI-{pr_number}"
+        try:
+            self.graph.query("""
+            MERGE (i:Incident {id: $id})
+            SET i.failing_function = $func,
+                i.failing_file = $file,
+                i.error_message = $error,
+                i.commit_sha = $sha,
+                i.pr_number = $pr,
+                i.status = 'ACTIVE',
+                i.severity = 'HIGH',
+                i.timestamp = $ts,
+                i.impacted_count = $impacted_count
+            """, {
+                "id": inc_id,
+                "func": failing_func,
+                "file": failing_file,
+                "error": error_msg,
+                "sha": commit_sha,
+                "pr": pr_number,
+                "ts": datetime.now(timezone.utc).isoformat(),
+                "impacted_count": blast.get("total_impacted_functions", 0)
+            })
+        except Exception:
+            pass
+
         # Generate markdown review comment for GitHub PR
         bot_comment = f"""### 🤖 GraphOps Autonomous Incident & Blast Radius Report
 > **CI/CD Failure Detected in PR #{pr_number}**  
@@ -114,6 +141,7 @@ class GitHubWatcher:
 
         return {
             "status": "ANALYZED",
+            "incident_id": inc_id,
             "failing_function": failing_func,
             "blast_radius": blast,
             "revert_ticket": ticket,

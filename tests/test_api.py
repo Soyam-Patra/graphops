@@ -220,5 +220,60 @@ class TestAPI(unittest.TestCase):
         self.assertEqual(data["commit_reverted"], "86e6fd7")
         self.assertTrue(data["falkordb_mutated"])
 
+    @patch("src.api.CodebaseTools")
+    def test_codebase_overview_endpoint(self, mock_tools_cls):
+        mock_tools = MagicMock()
+        mock_tools.find_most_critical_functions.return_value = [{"function_name": "calc", "in_degree": 3}]
+        mock_tools.graph.query.side_effect = [
+            MagicMock(result_set=[[10]]),  # functions
+            MagicMock(result_set=[[5]]),   # files
+            MagicMock(result_set=[[25]]),  # calls
+            MagicMock(result_set=[[4]]),   # commits
+            MagicMock(result_set=[["a1b2c3d", "test commit", "2026-10-17"]]), # latest commit
+            MagicMock(result_set=[[1]])    # active incidents
+        ]
+        mock_tools_cls.return_value = mock_tools
+
+        res = self.client.get("/api/codebase/overview")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "ONLINE")
+        self.assertEqual(data["indexed_revision"], "a1b2c3d")
+        self.assertEqual(data["metrics"]["total_functions"], 10)
+
+    @patch("src.api.CodebaseTools")
+    def test_codebase_incidents_endpoint(self, mock_tools_cls):
+        mock_tools = MagicMock()
+        mock_tools.graph.query.return_value = MagicMock(result_set=[
+            ["INC-101", "charge_card", "pay.py", "TypeError", "c123456", 12, "ACTIVE", "HIGH", "2026-10-18T10:00:00Z", 3]
+        ])
+        mock_tools_cls.return_value = mock_tools
+
+        res = self.client.get("/api/codebase/incidents")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "SUCCESS")
+        self.assertEqual(len(data["incidents"]), 1)
+        self.assertEqual(data["incidents"][0]["failing_function"], "charge_card")
+
+    @patch("src.api.CodebaseTools")
+    @patch("src.api.AgentMemoryEngine")
+    def test_codebase_audit_endpoint(self, mock_mem_cls, mock_tools_cls):
+        mock_tools = MagicMock()
+        mock_tools.graph.query.return_value = MagicMock(result_set=[
+            ["REV-001", "GIT_REVERT", "sha123", "charge_card", "EXECUTED", 0, True, "2026-10-18T10:05:00Z"]
+        ])
+        mock_tools_cls.return_value = mock_tools
+        mock_mem = MagicMock()
+        mock_mem.get_all_episodes.return_value = [{"episode_id": "EP-01", "root_cause": "Bug"}]
+        mock_mem_cls.return_value = mock_mem
+
+        res = self.client.get("/api/codebase/audit")
+        self.assertEqual(res.status_code, 200)
+        data = res.json()
+        self.assertEqual(data["status"], "SUCCESS")
+        self.assertEqual(len(data["recovery_actions"]), 1)
+        self.assertEqual(data["recovery_actions"][0]["action_id"], "REV-001")
+
 if __name__ == "__main__":
     unittest.main()

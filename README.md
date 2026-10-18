@@ -195,16 +195,31 @@ python -m unittest discover tests/
 
 ### 4. Run Interactive Web Dashboard
 ```bash
-python -m uvicorn src.api:app --host 0.0.0.0 --port 8080
+python -m uvicorn src.api:app --host 0.0.0.0 --port 8080 --reload
 ```
-Open **`http://localhost:8080`** in your browser:
-* **Microservices & Incident Swarm Tab**: Click **"Run Autonomous Swarm"** to watch the multi-agent reasoning chain resolve outages in real time.
-* **Agent Memory & Coordination Tab**: Inspect persistent episodic memory and active multi-agent handoff tickets in `agent_memory_swarm`.
-* **Codebase AST & Git Blame Tab**: Click **"Ingest AST"** to parse any repository into FalkorDB, calculate multi-hop function blast radius, and generate 1-click `git revert` remediation tickets.
-* **Live GitHub CI/CD Watcher Bot**: 1-click interactive simulation to push commits and simulate CI failure alerts with real-time PR review comments.
+Open **`http://localhost:8080`** in your browser. The application offers two clearly separated primary experiences:
+
+#### 1. Codebases (The Real Product)
+* **GitHub Connection**: Connect your GitHub account via PAT or public username (e.g. `@Soyam-Patra`) to list and authorize repositories.
+* **Repository Catalog**: View authorized repositories, sync status, and health indicators.
+* **Inspect Codebase**:
+  * **Overview & Health**: High-level metrics (indexed functions, call dependencies, files, active incidents, and degree centrality bottlenecks).
+  * **Dependency Graph**: Interactive Vis.js topology canvas with search jump, node inspection (direct callers vs. transitive callers with hop distances), and blame commit history.
+  * **Incidents & CI/CD**: Intercepted build/test failures with failing function, candidate commit attribution, and webhook simulation.
+  * **Incident Dossier & Safe Recovery**: Detailed error trace, GraphBLAS multi-hop blast radius, and **"Propose Recovery"** with preview and explicit user approval before executing safe `git revert`.
+  * **Activity & Audit**: Real chronological audit trail of repository indexing, CI detections, and recovery actions.
+
+#### 2. Sandbox Lab (Demonstration & Validation Environment)
+* **Isolated Environment**: Runs strictly against `sandbox_repo/` without touching production code.
+* **5-Step Verifiable Closed Loop**:
+  1. **Baseline**: Known-good payment gateway code and 100% passing tests (Exit 0).
+  2. **Inject Regression**: Controlled bug committed as `Soyam` &rarr; live test suite fails (Exit 1).
+  3. **Diagnose with FalkorDB**: FalkorDB GraphBLAS multi-hop traversal in **3.2ms**, identifying 4 impacted callers and culprit commit.
+  4. **Review Recovery**: Previews safe `git revert` command with linear history explanation.
+  5. **Revert & Verify**: Genuinely executes `git revert` in the sandbox, re-runs tests live returning to **100% GREEN (Exit 0)**, and writes `:RecoveryAction` audit proof to FalkorDB.
 
 ---
 
 ## 🧪 Verification & Benchmark Results
-* **Test Suite**: **23 / 23 unit tests passing** (100% pass rate) across all parser, tool, agent memory, GitHub watcher, and API suites.
+* **Test Suite**: **34 / 34 unit tests passing** (100% pass rate) across all parser, tool, agent memory, GitHub watcher, sandbox engine, and API suites.
 * **Traversal Speed**: GraphBLAS sparse-matrix operations executed 4-hop blast radius queries across 500+ AST relationships in **under 4 milliseconds**.
