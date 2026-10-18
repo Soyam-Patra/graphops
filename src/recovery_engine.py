@@ -30,11 +30,11 @@ class StalePatchError(RecoverySafetyError):
     pass
 
 class TargetedRecoveryEngine:
-    def __init__(self, host: str = "localhost", port: int = 6379):
-        self.host = host
-        self.port = port
-        self.tools = CodebaseTools(host=host, port=port)
-        self.memory = AgentMemoryEngine(host=host, port=port)
+    def __init__(self, host: Optional[str] = None, port: Optional[int] = None):
+        self.host = host if (host is not None and host != "localhost") else os.getenv("FALKORDB_HOST", "localhost")
+        self.port = port if (port is not None and port != 6379) else int(os.getenv("FALKORDB_PORT", 6379))
+        self.tools = CodebaseTools(host=self.host, port=self.port)
+        self.memory = AgentMemoryEngine(host=self.host, port=self.port)
 
     def _run_git(self, repo_path: str, args: List[str], check: bool = True) -> subprocess.CompletedProcess:
         """Executes a git command targeted at repo_path."""

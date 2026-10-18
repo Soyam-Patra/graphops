@@ -12,8 +12,8 @@ from falkordb import FalkorDB
 
 class GitHubWatcher:
     def __init__(self, host: Optional[str] = None, port: Optional[int] = None, graph_name: str = "codebase_graph"):
-        self.host = host if host is not None else os.getenv("FALKORDB_HOST", "localhost")
-        self.port = port if port is not None else int(os.getenv("FALKORDB_PORT", 6379))
+        self.host = host if (host is not None and host != "localhost") else os.getenv("FALKORDB_HOST", "localhost")
+        self.port = port if (port is not None and port != 6379) else int(os.getenv("FALKORDB_PORT", 6379))
         self.graph_name = graph_name
         self.tools = CodebaseTools(host=self.host, port=self.port, graph_name=self.graph_name)
         self.password = os.getenv("FALKORDB_PASSWORD") or None
