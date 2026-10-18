@@ -15,16 +15,16 @@ PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 from falkordb import FalkorDB
 from src.code_parser import CodebaseParser
 
 CODEBASE_GRAPH = "codebase_graph"
 
 class CodebaseGraphSeeder:
-    def __init__(self, host: str = "localhost", port: int = 6379, graph_name: str = CODEBASE_GRAPH):
-        self.host = host
-        self.port = port
+    def __init__(self, host: Optional[str] = None, port: Optional[int] = None, graph_name: str = CODEBASE_GRAPH):
+        self.host = host if host is not None else os.getenv("FALKORDB_HOST", "localhost")
+        self.port = port if port is not None else int(os.getenv("FALKORDB_PORT", 6379))
         self.graph_name = graph_name
         self.db = FalkorDB(host=self.host, port=self.port)
         self.graph = self.db.select_graph(self.graph_name)

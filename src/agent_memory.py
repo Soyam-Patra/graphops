@@ -7,6 +7,7 @@ Implements:
 Directly satisfies Track 2: Agent Memory and Coordination.
 """
 
+import os
 from typing import List, Dict, Any, Optional
 from datetime import datetime, timezone
 from falkordb import FalkorDB
@@ -14,9 +15,9 @@ from falkordb import FalkorDB
 MEMORY_GRAPH = "agent_memory_swarm"
 
 class AgentMemoryEngine:
-    def __init__(self, host: str = "localhost", port: int = 6379, memory_graph: str = MEMORY_GRAPH):
-        self.host = host
-        self.port = port
+    def __init__(self, host: Optional[str] = None, port: Optional[int] = None, memory_graph: str = MEMORY_GRAPH):
+        self.host = host if host is not None else os.getenv("FALKORDB_HOST", "localhost")
+        self.port = port if port is not None else int(os.getenv("FALKORDB_PORT", 6379))
         self.memory_graph = memory_graph
         self.db = FalkorDB(host=self.host, port=self.port)
         self.graph = self.db.select_graph(self.memory_graph)

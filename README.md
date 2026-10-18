@@ -3,9 +3,13 @@
 > **A Graph-Powered Incident Investigation & Organizational Swarm**  
 > *Built for "Graph Hacks: Context for AI Agents" (WeMakeDevs × FalkorDB, Oct 2026)*
 
-[![FalkorDB](https://img.shields.io/badge/Graph_Database-FalkorDB_v1.7-blue.svg)](https://www.falkordb.com/)
-[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg)](LICENSE)
+[![Live Demo](https://img.shields.io/badge/Live_Demo-Render-46E3B7.svg?style=for-the-badge&logo=render&logoColor=black)](https://graphops-29w6.onrender.com/)
+[![FalkorDB](https://img.shields.io/badge/Graph_Database-FalkorDB_v1.7-blue.svg?style=for-the-badge)](https://www.falkordb.com/)
+[![FastAPI](https://img.shields.io/badge/Backend-FastAPI-009688.svg?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![License](https://img.shields.io/badge/License-Apache_2.0-green.svg?style=for-the-badge)](LICENSE)
+
+> 🚀 **Live Cloud Deployment**: [**https://graphops-29w6.onrender.com/**](https://graphops-29w6.onrender.com/)  
+> Explore live dependency blast radius, CI/CD failure localization, and human-approved targeted recovery without any local installation!
 
 ---
 
@@ -164,7 +168,12 @@ GraphOps operates on two complementary graph planes:
 
 ## 🚀 Quickstart & Setup Instructions
 
-### Prerequisites
+### 🌐 Live Cloud Deployment (No Setup Needed)
+The full GraphOps platform is deployed and running live on Render:
+* **Interactive Web App**: [https://graphops-29w6.onrender.com/](https://graphops-29w6.onrender.com/)
+* **System Health & Graph Telemetry**: [https://graphops-29w6.onrender.com/api/status](https://graphops-29w6.onrender.com/api/status)
+
+### Local Prerequisites
 * Docker & Docker Compose
 * Python 3.10+
 
@@ -221,5 +230,5 @@ Open **`http://localhost:8080`** in your browser. The application offers two cle
 ---
 
 ## 🧪 Verification & Benchmark Results
-* **Test Suite**: **34 / 34 unit tests passing** (100% pass rate) across all parser, tool, agent memory, GitHub watcher, sandbox engine, and API suites.
+* **Test Suite**: **45 / 45 unit tests passing** (100% pass rate in ~11s) across all failure analyzer, targeted recovery engine, parser, tool, agent memory, GitHub watcher, sandbox engine, and API suites.
 * **Traversal Speed**: GraphBLAS sparse-matrix operations executed 4-hop blast radius queries across 500+ AST relationships in **under 4 milliseconds**.

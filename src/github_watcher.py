@@ -4,15 +4,16 @@ Connects GitHub repositories to FalkorDB for live commit tracking,
 incremental AST updates, and automated PR blast radius reviews.
 """
 
+import os
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timezone
 from src.code_tools import CodebaseTools
 from falkordb import FalkorDB
 
 class GitHubWatcher:
-    def __init__(self, host: str = "localhost", port: int = 6379, graph_name: str = "codebase_graph"):
-        self.host = host
-        self.port = port
+    def __init__(self, host: Optional[str] = None, port: Optional[int] = None, graph_name: str = "codebase_graph"):
+        self.host = host if host is not None else os.getenv("FALKORDB_HOST", "localhost")
+        self.port = port if port is not None else int(os.getenv("FALKORDB_PORT", 6379))
         self.graph_name = graph_name
         self.tools = CodebaseTools(host=self.host, port=self.port, graph_name=self.graph_name)
         self.db = FalkorDB(host=self.host, port=self.port)

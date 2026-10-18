@@ -8,14 +8,22 @@ Includes:
 - Standard Operating Procedure Runbooks (Procedural context)
 """
 
+import os
 import sys
+
+PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+if PROJECT_ROOT not in sys.path:
+    sys.path.insert(0, PROJECT_ROOT)
+
 from falkordb import FalkorDB
 
 GRAPH_NAME = "company_brain"
 
 def seed_company_brain(scenario: str = "bad_deployment"):
     print(f"[*] Connecting to FalkorDB to populate graph '{GRAPH_NAME}' (Scenario: {scenario})...")
-    db = FalkorDB(host="localhost", port=6379)
+    host = os.getenv("FALKORDB_HOST", "localhost")
+    port = int(os.getenv("FALKORDB_PORT", 6379))
+    db = FalkorDB(host=host, port=port)
     graph = db.select_graph(GRAPH_NAME)
 
     # 1. Clear existing graph data for a clean reproducible state
