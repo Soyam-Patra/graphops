@@ -20,10 +20,16 @@ from falkordb import FalkorDB
 GRAPH_NAME = "company_brain"
 
 def seed_company_brain(scenario: str = "bad_deployment"):
-    print(f"[*] Connecting to FalkorDB to populate graph '{GRAPH_NAME}' (Scenario: {scenario})...")
     host = os.getenv("FALKORDB_HOST", "localhost")
     port = int(os.getenv("FALKORDB_PORT", 6379))
-    db = FalkorDB(host=host, port=port)
+    password = os.getenv("FALKORDB_PASSWORD") or None
+    username = os.getenv("FALKORDB_USERNAME") or None
+    kwargs = {"host": host, "port": port}
+    if password:
+        kwargs["password"] = password
+    if username:
+        kwargs["username"] = username
+    db = FalkorDB(**kwargs)
     graph = db.select_graph(GRAPH_NAME)
 
     # 1. Clear existing graph data for a clean reproducible state
