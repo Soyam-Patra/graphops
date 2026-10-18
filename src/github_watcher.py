@@ -16,7 +16,14 @@ class GitHubWatcher:
         self.port = port if port is not None else int(os.getenv("FALKORDB_PORT", 6379))
         self.graph_name = graph_name
         self.tools = CodebaseTools(host=self.host, port=self.port, graph_name=self.graph_name)
-        self.db = FalkorDB(host=self.host, port=self.port)
+        self.password = os.getenv("FALKORDB_PASSWORD") or None
+        self.username = os.getenv("FALKORDB_USERNAME") or None
+        kwargs = {"host": self.host, "port": self.port}
+        if self.password:
+            kwargs["password"] = self.password
+        if self.username:
+            kwargs["username"] = self.username
+        self.db = FalkorDB(**kwargs)
         self.graph = self.db.select_graph(self.graph_name)
 
     def handle_push_event(self, payload: Dict[str, Any]) -> Dict[str, Any]:

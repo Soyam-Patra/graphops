@@ -714,29 +714,32 @@ async def simulate_github_event(req: GitHubSimulateRequest) -> Dict[str, Any]:
     """
     Simulates a live developer commit or CI/CD test failure directly from the web UI.
     """
-    watcher = GitHubWatcher()
-    if req.event_type == "push":
-        simulated_payload = {
-            "repository": {"name": "graphops"},
-            "sender": {"login": req.author.lower()},
-            "commits": [{
-                "id": f"{req.commit_sha}9999",
-                "message": f"feat: update {req.failing_function} logic in {req.failing_file}",
-                "author": {"name": req.author, "email": f"{req.author.lower()}@graphops.dev"},
-                "modified": [req.failing_file],
-                "added": []
-            }]
-        }
-        return watcher.handle_push_event(simulated_payload)
-    else:
-        simulated_payload = {
-            "failing_function": req.failing_function,
-            "failing_file": req.failing_file,
-            "error_message": req.error_message,
-            "commit_sha": req.commit_sha,
-            "pr_number": 42
-        }
-        return watcher.handle_ci_failure_event(simulated_payload)
+    try:
+        watcher = GitHubWatcher()
+        if req.event_type == "push":
+            simulated_payload = {
+                "repository": {"name": "graphops"},
+                "sender": {"login": req.author.lower()},
+                "commits": [{
+                    "id": f"{req.commit_sha}9999",
+                    "message": f"feat: update {req.failing_function} logic in {req.failing_file}",
+                    "author": {"name": req.author, "email": f"{req.author.lower()}@graphops.dev"},
+                    "modified": [req.failing_file],
+                    "added": []
+                }]
+            }
+            return watcher.handle_push_event(simulated_payload)
+        else:
+            simulated_payload = {
+                "failing_function": req.failing_function,
+                "failing_file": req.failing_file,
+                "error_message": req.error_message,
+                "commit_sha": req.commit_sha,
+                "pr_number": 42
+            }
+            return watcher.handle_ci_failure_event(simulated_payload)
+    except Exception as e:
+        return {"status": "ERROR", "error": str(e)}
 
 # =========================================================================
 # GitHub Account Authentication & Multi-Repo Monitoring Endpoints

@@ -40,9 +40,22 @@ class SandboxEngine:
         """Executes a git command strictly targeted at sandbox_repo via explicit git-dir and work-tree."""
         git_dir = os.path.join(self.sandbox_path, ".git")
         if not os.path.exists(os.path.join(git_dir, "HEAD")):
-            subprocess.run(["git", "init"], cwd=self.sandbox_path, capture_output=True, check=True, env=self.git_env)
-        cmd = ["git", f"--git-dir={git_dir}", f"--work-tree={self.sandbox_path}"] + args
-        return subprocess.run(cmd, capture_output=True, text=True, check=check, env=self.git_env)
+            subprocess.run(["git", "-c", "safe.directory=*", "init", "-b", "main"], cwd=self.sandbox_path, capture_output=True, check=False, env=self.git_env)
+            subprocess.run(["git", "-c", "safe.directory=*", f"--git-dir={git_dir}", f"--work-tree={self.sandbox_path}", "config", "user.name", "Soyam"], cwd=self.sandbox_path, capture_output=True, check=False, env=self.git_env)
+            subprocess.run(["git", "-c", "safe.directory=*", f"--git-dir={git_dir}", f"--work-tree={self.sandbox_path}", "config", "user.email", "soyampatra2006@gmail.com"], cwd=self.sandbox_path, capture_output=True, check=False, env=self.git_env)
+        cmd = [
+            "git",
+            "-c", "safe.directory=*",
+            "-c", "user.name=Soyam",
+            "-c", "user.email=soyampatra2006@gmail.com",
+            f"--git-dir={git_dir}",
+            f"--work-tree={self.sandbox_path}"
+        ] + args
+        res = subprocess.run(cmd, capture_output=True, text=True, env=self.git_env)
+        if check and res.returncode != 0:
+            err = res.stderr.strip() or res.stdout.strip()
+            raise RuntimeError(f"Git command failed ({' '.join(args)}): {err}")
+        return res
 
     def get_state(self) -> Dict[str, Any]:
         """Loads persistent sandbox state."""
@@ -258,8 +271,8 @@ def process_payment(user_id: str, card_token: str, amount: float) -> dict:
             f.write(broken_payment_code)
 
         # Commit regression to Git inside sandbox_repo
-        self._run_git(["add", "-f", "src/payment_gateway.py"])
-        self._run_git(["commit", "-m", "feat: add dynamic multi-currency fee multiplier"])
+        self._run_git(["add", "-A"])
+        self._run_git(["commit", "--allow-empty", "-m", "feat: add dynamic multi-currency fee multiplier"])
 
         sha_res = self._run_git(["rev-parse", "--short", "HEAD"])
         regression_sha = sha_res.stdout.strip()
@@ -490,8 +503,8 @@ def process_payment(user_id: str, card_token: str, amount: float) -> dict:
             f.write(mixed_payment_code)
 
         # Commit to Git in sandbox
-        self._run_git(["add", "-f", "src/payment_gateway.py"])
-        self._run_git(["commit", "-m", "feat(payment): add structured audit logging and dynamic fee calculation"])
+        self._run_git(["add", "-A"])
+        self._run_git(["commit", "--allow-empty", "-m", "feat(payment): add structured audit logging and dynamic fee calculation"])
 
         sha_res = self._run_git(["rev-parse", "--short", "HEAD"])
         mixed_sha = sha_res.stdout.strip()

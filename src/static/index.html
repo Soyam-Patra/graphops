@@ -518,7 +518,9 @@
       border-radius: var(--radius);
       border: 1px solid var(--border);
       width: 100%;
-      max-width: 520px;
+      max-width: 540px;
+      max-height: 90vh;
+      overflow-y: auto;
       padding: 24px;
       box-shadow: var(--shadow-md);
     }
@@ -1367,7 +1369,24 @@
         const res = await fetch('/api/codebase/graph');
         const data = await res.json();
         const container = document.getElementById('topology-canvas');
-        if (!data.nodes || data.nodes.length === 0) return;
+        if (data.error) {
+          container.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-muted); gap:12px; padding:24px; text-align:center;">
+            <div style="font-size:24px;">⚠️</div>
+            <div style="font-weight:600; color:var(--danger);">${data.error}</div>
+            <div style="font-size:12px;">Ensure FalkorDB credentials are valid, then click below to index the codebase into FalkorDB.</div>
+            <button class="btn btn-primary btn-sm" onclick="resyncCodebaseGraph()">⚡ Index Codebase Graph Now</button>
+          </div>`;
+          return;
+        }
+        if (!data.nodes || data.nodes.length === 0) {
+          container.innerHTML = `<div style="display:flex; flex-direction:column; align-items:center; justify-content:center; height:100%; color:var(--text-muted); gap:12px; padding:24px; text-align:center;">
+            <div style="font-size:24px;">📁</div>
+            <div style="font-weight:600; color:var(--text);">No graph nodes found in FalkorDB codebase_graph.</div>
+            <div style="font-size:12px;">Click below to parse and populate AST functions, files, and dependencies.</div>
+            <button class="btn btn-primary btn-sm" onclick="resyncCodebaseGraph()">⚡ Index Codebase Graph Now</button>
+          </div>`;
+          return;
+        }
 
         allGraphNodes = data.nodes;
         const nodesDataSet = new vis.DataSet(data.nodes);

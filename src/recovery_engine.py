@@ -41,7 +41,14 @@ class TargetedRecoveryEngine:
         env = os.environ.copy()
         env["GIT_TERMINAL_PROMPT"] = "0"
         git_dir = os.path.join(os.path.abspath(repo_path), ".git")
-        cmd = ["git", f"--git-dir={git_dir}", f"--work-tree={os.path.abspath(repo_path)}"] + args
+        cmd = [
+            "git",
+            "-c", "safe.directory=*",
+            "-c", "user.name=Soyam",
+            "-c", "user.email=soyampatra2006@gmail.com",
+            f"--git-dir={git_dir}",
+            f"--work-tree={os.path.abspath(repo_path)}"
+        ] + args
         return subprocess.run(cmd, capture_output=True, text=True, check=check, env=env)
 
     # =========================================================================
