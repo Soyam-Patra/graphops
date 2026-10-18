@@ -52,6 +52,11 @@ async def serve_unified_app():
         return FileResponse(index_file)
     return "<h1>GraphOps Application Initializing...</h1>"
 
+@app.get("/health")
+async def health_check() -> Dict[str, Any]:
+    """Lightweight health check for Render and monitoring probes."""
+    return {"status": "ok", "service": "GraphOps", "version": "1.0.0"}
+
 @app.get("/api/status")
 async def get_system_status() -> Dict[str, Any]:
     """Returns FalkorDB connection status, node/edge counts, and active incidents."""

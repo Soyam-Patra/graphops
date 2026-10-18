@@ -1,0 +1,10 @@
+.git/
+.repo_cache/
+sandbox_repo/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+data/
+*.log
+.system_generated/
