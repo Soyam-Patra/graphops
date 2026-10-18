@@ -143,7 +143,10 @@ class AgentMemoryEngine:
         incident_id: str,
         service_id: str,
         diagnosis: str,
-        recommended_action: str
+        recommended_action: str,
+        status: str = "PENDING",
+        proposed_diff: Optional[str] = None,
+        candidate_commit: Optional[str] = None
     ) -> str:
         """
         Triage Agent writes a HandoffTicket to the graph for Remediation Agent to process.
@@ -160,7 +163,9 @@ class AgentMemoryEngine:
             service_id: $service_id,
             diagnosis: $diagnosis,
             recommended_action: $recommended_action,
-            status: 'PENDING',
+            status: $status,
+            proposed_diff: $proposed_diff,
+            candidate_commit: $candidate_commit,
             created_at: $created_at
         })
         RETURN h.ticket_id AS tid
@@ -173,19 +178,101 @@ class AgentMemoryEngine:
             "service_id": service_id,
             "diagnosis": diagnosis,
             "recommended_action": recommended_action,
+            "status": status,
+            "proposed_diff": proposed_diff or "",
+            "candidate_commit": candidate_commit or "",
             "created_at": now_iso
         }
         res = self.graph.query(query, params)
         return res.result_set[0][0]
+
+    def update_handoff_ticket_status(
+        self,
+        ticket_id: str,
+        status: str,
+        resolved_by: Optional[str] = None,
+        execution_result: Optional[str] = None,
+        proposed_diff: Optional[str] = None,
+        approved_by: Optional[str] = None,
+        exit_code: Optional[int] = None,
+        notes: Optional[str] = None
+    ) -> bool:
+        """
+        Updates the ticket through distinct states:
+        'AWAITING_APPROVAL', 'APPLYING', 'VERIFYING', 'VERIFIED_SUCCESS', 'VERIFIED_FAILED', 'CANCELLED', 'COMPLETED'.
+        """
+        now_iso = datetime.now(timezone.utc).isoformat()
+        query = """
+        MATCH (h:HandoffTicket {ticket_id: $ticket_id})
+        SET h.status = $status,
+            h.updated_at = $updated_at
+        """
+        params = {
+            "ticket_id": ticket_id,
+            "status": status,
+            "updated_at": now_iso
+        }
+        if resolved_by is not None:
+            query += ", h.resolved_by = $resolved_by"
+            params["resolved_by"] = resolved_by
+        if execution_result is not None:
+            query += ", h.execution_result = $execution_result"
+            params["execution_result"] = execution_result
+        if proposed_diff is not None:
+            query += ", h.proposed_diff = $proposed_diff"
+            params["proposed_diff"] = proposed_diff
+        if approved_by is not None:
+            query += ", h.approved_by = $approved_by, h.approved_at = $updated_at"
+            params["approved_by"] = approved_by
+        if exit_code is not None:
+            query += ", h.verification_exit_code = $exit_code"
+            params["exit_code"] = exit_code
+        if notes is not None:
+            query += ", h.notes = $notes"
+            params["notes"] = notes
+
+        query += " RETURN count(h) AS updated"
+        res = self.graph.query(query, params)
+        return res.result_set[0][0] > 0
+
+    def get_handoff_ticket(self, ticket_id: str) -> Optional[Dict[str, Any]]:
+        """Retrieves a specific handoff ticket by ID."""
+        query = """
+        MATCH (h:HandoffTicket {ticket_id: $ticket_id})
+        RETURN h.ticket_id, h.from_agent, h.to_agent, h.incident_id,
+               h.service_id, h.diagnosis, h.recommended_action,
+               h.status, h.resolved_by, h.proposed_diff, h.approved_by,
+               h.verification_exit_code, h.created_at
+        """
+        res = self.graph.query(query, {"ticket_id": ticket_id})
+        if not res.result_set:
+            return None
+        r = res.result_set[0]
+        return {
+            "ticket_id": r[0],
+            "from_agent": r[1],
+            "to_agent": r[2],
+            "incident_id": r[3],
+            "service_id": r[4],
+            "diagnosis": r[5],
+            "recommended_action": r[6],
+            "status": r[7],
+            "resolved_by": r[8],
+            "proposed_diff": r[9],
+            "approved_by": r[10],
+            "verification_exit_code": r[11],
+            "created_at": r[12]
+        }
 
     def get_pending_handoffs(self, agent_role: str) -> List[Dict[str, Any]]:
         """
         Retrieves pending handoffs waiting for an agent with the given role.
         """
         query = """
-        MATCH (h:HandoffTicket {to_agent: $agent_role, status: 'PENDING'})
+        MATCH (h:HandoffTicket)
+        WHERE h.to_agent = $agent_role AND (h.status = 'PENDING' OR h.status = 'AWAITING_APPROVAL')
         RETURN h.ticket_id, h.from_agent, h.incident_id, h.service_id,
-               h.diagnosis, h.recommended_action, h.created_at
+               h.diagnosis, h.recommended_action, h.created_at, h.status
         ORDER BY h.created_at ASC
         """
         res = self.graph.query(query, {"agent_role": agent_role})
@@ -198,7 +285,8 @@ class AgentMemoryEngine:
                 "service_id": r[3],
                 "diagnosis": r[4],
                 "recommended_action": r[5],
-                "created_at": r[6]
+                "created_at": r[6],
+                "status": r[7]
             })
         return tickets
 
@@ -228,6 +316,7 @@ class AgentMemoryEngine:
         }
         res = self.graph.query(query, params)
         return res.result_set[0][0] > 0
+
 
     def get_all_handoffs(self, limit: int = 20) -> List[Dict[str, Any]]:
         """

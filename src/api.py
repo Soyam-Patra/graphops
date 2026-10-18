@@ -5,6 +5,7 @@ and inspect real-time agent audit logs.
 """
 
 import os
+import time
 import requests
 from typing import Dict, Any, Optional, List
 from fastapi import FastAPI, BackgroundTasks, Request
@@ -22,6 +23,8 @@ from src.code_graph_seeder import CodebaseGraphSeeder
 from src.code_tools import CodebaseTools
 from src.github_watcher import GitHubWatcher
 from src.sandbox_engine import SandboxEngine
+from src.failure_analyzer import FailureAnalyzer, FailureEvidence
+from src.recovery_engine import TargetedRecoveryEngine, RecoverySafetyError, DirtyWorkingTreeError, StalePatchError
 
 app = FastAPI(title="GraphOps: Autonomous Multi-Agent SRE Swarm", version="1.0.0")
 
@@ -873,6 +876,170 @@ async def monitor_selected_repo(req: GitHubMonitorRepoRequest) -> Dict[str, Any]
         return {"status": "ERROR", "message": str(e)}
 
 # =========================================================================
+# Evidence-Based Diagnosis and Human-Approved Targeted Recovery Endpoints
+# =========================================================================
+
+class RecoveryDiagnoseRequest(BaseModel):
+    repo_path: Optional[str] = "."
+    failing_function: Optional[str] = "charge_card"
+    failing_file: Optional[str] = "src/payment_gateway.py"
+    traceback: Optional[str] = ""
+    incident_id: Optional[str] = None
+
+class RecoveryApplyRequest(BaseModel):
+    repo_path: Optional[str] = "."
+    ticket_id: Optional[str] = None
+    patch_diff: Optional[str] = None
+    affected_file: Optional[str] = None
+    affected_function: Optional[str] = None
+    candidate_commit_sha: Optional[str] = "HEAD"
+    patch_summary: Optional[str] = "Targeted minimal patch"
+    human_approved: bool = False
+    approver: str = "Developer"
+    test_command: Optional[str] = "python -m unittest discover tests/"
+
+class RecoveryCancelRequest(BaseModel):
+    ticket_id: str
+    reason: Optional[str] = "Cancelled by developer"
+
+@app.post("/api/recovery/diagnose")
+async def diagnose_and_propose_recovery(req: RecoveryDiagnoseRequest) -> Dict[str, Any]:
+    """
+    Performs evidence-based failure localization, FalkorDB multi-hop blast radius,
+    Git candidate commit analysis with exact diff hunks, and minimal targeted patch generation.
+    Places ticket in 'AWAITING_APPROVAL' state.
+    """
+    try:
+        repo_path = os.path.abspath(req.repo_path or ".")
+        failing_func = req.failing_function or "charge_card"
+        failing_file = req.failing_file or "src/payment_gateway.py"
+        inc_id = req.incident_id or f"INC-{int(time.time())}"
+
+        # 1. Failure Localization
+        trace_text = req.traceback or f"TypeError: unsupported operand type(s) for *: 'float' and 'NoneType'\n  File '{failing_file}', line 235, in {failing_func}\n    fee = amount * fee_multiplier"
+        evidence = FailureAnalyzer.parse_traceback(
+            traceback_text=trace_text,
+            repository_id=os.path.basename(repo_path),
+            test_command="python -m unittest discover tests/"
+        )
+
+        # 2. FalkorDB Reverse Call Graph Blast Radius
+        tools = CodebaseTools()
+        blast_radius = tools.calculate_function_blast_radius(failing_func, max_hops=4)
+
+        # 3. Candidate Commit Analysis via Git diffs
+        engine = TargetedRecoveryEngine()
+        candidates = engine.identify_candidate_commits(
+            repo_path=repo_path,
+            suspected_file=failing_file,
+            suspected_function=failing_func,
+            failure_evidence=evidence
+        )
+        top_candidate = candidates[0] if candidates else {
+            "sha": "HEAD", "full_sha": "HEAD", "author": "Developer",
+            "message": "Recent commit", "confidence": "MEDIUM",
+            "relevant_diff_hunk": "@@ -0,0 +1,10 @@",
+            "why_suspected": "Suspected based on function call graph.",
+            "reproducibility": "Historical environment cannot be reproduced.",
+            "limitations": "Candidate identified via AST modification history."
+        }
+
+        # 4. Targeted Patch Generation (Preserving Unrelated Changes)
+        patch_data = engine.generate_targeted_patch(
+            repo_path=repo_path,
+            suspected_file=failing_file,
+            suspected_function=failing_func,
+            candidate_commit=top_candidate,
+            failure_evidence=evidence
+        )
+
+        # 5. Multi-Agent Shared Blackboard Handoff Ticket in agent_memory_swarm
+        mem = AgentMemoryEngine()
+        ticket_id = mem.create_handoff_ticket(
+            from_agent="TriageAgent",
+            to_agent="RemediationAgent",
+            incident_id=inc_id,
+            service_id=f"{failing_file}::{failing_func}",
+            diagnosis=f"Failure localized to {failing_func}. Suspect commit {top_candidate.get('sha')}.",
+            recommended_action="APPLY_TARGETED_PATCH",
+            status="AWAITING_APPROVAL",
+            proposed_diff=patch_data.get("unified_diff", ""),
+            candidate_commit=top_candidate.get("sha", "")
+        )
+
+        return {
+            "status": "PROPOSED" if patch_data.get("safe_to_apply") else "MANUAL_REVIEW_REQUIRED",
+            "incident_id": inc_id,
+            "ticket_id": ticket_id,
+            "failure_evidence": evidence.to_dict(),
+            "blast_radius": blast_radius,
+            "candidate_commits": candidates,
+            "top_candidate": top_candidate,
+            "proposed_patch": patch_data,
+            "requires_human_approval": True,
+            "actions": ["Apply targeted fix", "Review full diff", "Cancel"]
+        }
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+@app.post("/api/recovery/apply")
+async def apply_human_approved_recovery(req: RecoveryApplyRequest) -> Dict[str, Any]:
+    """
+    Safely applies a human-approved targeted patch to a connected repository.
+    Enforces human approval, clean working tree, directory containment,
+    executes verification tests, and writes cryptographic audit proof to FalkorDB.
+    """
+    if not req.human_approved:
+        return {
+            "status": "APPROVAL_REQUIRED",
+            "error": "Human approval required before modifying code in a connected repository. Operation aborted.",
+            "tests_passed": False
+        }
+
+    try:
+        engine = TargetedRecoveryEngine()
+        patch_data = {
+            "affected_file": req.affected_file or "src/payment_gateway.py",
+            "affected_function": req.affected_function or "charge_card",
+            "unified_diff": req.patch_diff or "",
+            "patch_summary": req.patch_summary or "Human-approved targeted fix",
+            "candidate_commit_sha": req.candidate_commit_sha or "HEAD",
+            "reject_on_dirty": True
+        }
+
+        res = engine.apply_targeted_patch_safely(
+            repo_path=req.repo_path or ".",
+            patch_data=patch_data,
+            human_approved=req.human_approved,
+            approver=req.approver or "Developer",
+            run_verification=True,
+            test_command=req.test_command or "python -m unittest discover tests/"
+        )
+
+        if req.ticket_id:
+            mem = AgentMemoryEngine()
+            mem.update_handoff_ticket_status(
+                ticket_id=req.ticket_id,
+                status="VERIFIED_SUCCESS" if res["tests_passed"] else "VERIFIED_FAILED",
+                resolved_by=req.approver,
+                approved_by=req.approver,
+                exit_code=res["exit_code"],
+                execution_result=res["summary"]
+            )
+
+        return res
+    except RecoverySafetyError as rse:
+        return {"status": "SAFETY_VIOLATION", "error": str(rse), "tests_passed": False}
+    except Exception as e:
+        return {"status": "ERROR", "error": str(e), "tests_passed": False}
+
+@app.post("/api/recovery/cancel")
+async def cancel_recovery_proposal(req: RecoveryCancelRequest) -> Dict[str, Any]:
+    """Cancels a pending recovery proposal without modifying working tree."""
+    engine = TargetedRecoveryEngine()
+    return engine.cancel_proposal(ticket_id=req.ticket_id, reason=req.reason or "Cancelled by user")
+
+# =========================================================================
 # Verifiable Sandbox Closed-Loop Recovery Endpoints
 # =========================================================================
 
@@ -918,6 +1085,33 @@ async def revert_and_verify_sandbox() -> Dict[str, Any]:
     try:
         se = SandboxEngine()
         return se.execute_revert_and_verify()
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+@app.post("/api/sandbox/inject-mixed")
+async def inject_sandbox_mixed_regression() -> Dict[str, Any]:
+    """Injects both an unrelated feature ([AUDIT] logging) and a regression in sandbox."""
+    try:
+        se = SandboxEngine()
+        return se.inject_mixed_regression()
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+@app.post("/api/sandbox/targeted-propose")
+async def propose_sandbox_targeted_fix() -> Dict[str, Any]:
+    """Proposes targeted fix that preserves unrelated [AUDIT] logging feature."""
+    try:
+        se = SandboxEngine()
+        return se.propose_targeted_fix()
+    except Exception as e:
+        return {"status": "ERROR", "message": str(e)}
+
+@app.post("/api/sandbox/targeted-verify")
+async def apply_and_verify_sandbox_targeted_fix() -> Dict[str, Any]:
+    """Applies targeted fix with explicit approval and verifies [AUDIT] logging is preserved."""
+    try:
+        se = SandboxEngine()
+        return se.apply_targeted_fix_and_verify()
     except Exception as e:
         return {"status": "ERROR", "message": str(e)}
 
